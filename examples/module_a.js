@@ -1,8 +1,9 @@
+"use strict";
 
 // Initialise the worker
 // If the 'module' object is passed, then the host calls will use the methods on module.exports
 // If 'exports' does not exist in the object passed, then the object itself will be where the methods are called on.
-require('./requireWorker.js').initModule(module);
+require('../requireWorker.js').initModule(module);
 
 module.exports.hello = function(name){
 	// Simply return the result (finishes promise internally)
@@ -37,7 +38,7 @@ module.exports.intervalTest = function(arg1,cb,cb2){
 };
 
 // Require yet another worker within this worker
-var someOtherModule = require('./requireWorker.js').require(require.resolve('./someOtherModule.js')).shortMethods('yo');
+var someOtherModule = require('../requireWorker.js').require('./module_b.js',{ cwd:__dirname }).shortMethods('yo');
 
 // Map 'yo' to the new worker
 module.exports.yo = function(name,cb1){

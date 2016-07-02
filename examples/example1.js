@@ -4,7 +4,7 @@ var requireWorker = require('../requireWorker.js');
 
 //var someModule = requireWorker.require('./aModule.js');
 //var someModule = requireWorker.require('./aModule.js',{ cwd:__dirname });
-var someModule = requireWorker.require(require.resolve('./aModule.js'));
+var someModule = requireWorker.require(require.resolve('./module_a.js'));
 
 // The call method return a Promise for success & failure
 // Call the 'hello' method on the module (module.exports.hello)

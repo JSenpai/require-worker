@@ -1,5 +1,7 @@
+"use strict";
 
-require('./requireWorker.js').initModule(module);
+// Initialise the worker
+require('../requireWorker.js').initModule(module);
 
 module.exports.yo = function(name,callback){
 	callback('Yo?');
