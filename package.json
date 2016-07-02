@@ -1,0 +1,18 @@
+{
+  "name": "require-worker",
+  "version": "0.0.2",
+  "description": "Require differently. Load a module in a new process.",
+  "main": "requireWorker.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Unchosen"
+  },
+  "author": "unchosen.aus@gmail.com",
+  "license": "MIT"
+}
