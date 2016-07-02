@@ -24,9 +24,9 @@ TODO
 
 **worker = requireWorker.require(modulePath,requireOptions)** require a new module/worker. Returns a worker object
 
-	**worker.call(methodName,arguments..)** call a method on the module/worker. Returns a promise
+**worker.call(methodName,arguments..)** call a method on the module/worker. Returns a promise
 	
-	**worker.kill()** kill the worker (unload module)
+**worker.kill()** kill the worker (unload module)
 	
 **requireWorker.initModule(module)** initialise the require-worker for the required module
 
