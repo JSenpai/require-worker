@@ -25,6 +25,8 @@ TODO
 **worker = requireWorker.require(modulePath,requireOptions)** require a new module/worker. Returns a worker object
 
 **worker.call(methodName,arguments..)** call a method on the module/worker. Returns a promise
+
+**worker.methods[methodName](arguments..)** call a method on the module/worker. Returns a promise. If the property is a non-function in the module, it results with the value, or it set's the value if an argument is specified.
 	
 **worker.kill()** kill the worker (unload module)
 	

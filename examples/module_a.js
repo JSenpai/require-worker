@@ -5,6 +5,9 @@
 // If 'exports' does not exist in the object passed, then the object itself will be where the methods are called on.
 require('../requireWorker.js').initModule(module);
 
+module.exports.someValue = 'Foo Bar';
+module.exports.onTest = null;
+
 module.exports.hello = function(name){
 	// Simply return the result (finishes promise internally)
 	return 'Hello '+(name||'World')+'!';
@@ -38,12 +41,12 @@ module.exports.intervalTest = function(arg1,cb,cb2){
 };
 
 // Require yet another worker within this worker
-var someOtherModule = require('../requireWorker.js').require('./module_b.js',{ cwd:__dirname }).shortMethods('yo');
+var someOtherModule = require('../requireWorker.js').require('./module_b.js',{ cwd:__dirname });
 
 // Map 'yo' to the new worker
 module.exports.yo = function(name,cb1){
 	var self = this;
-	someOtherModule.yo(name,cb1).then(function(result){
+	someOtherModule.methods.yo(name,cb1).then(function(result){
 		self.finish('Sub-Worker Result: '+result);
 	},function(err){
 		self.rehect('Sub-Worker Error: '+err);

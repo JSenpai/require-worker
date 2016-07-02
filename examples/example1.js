@@ -25,11 +25,11 @@ someModule.call(null).then(function(){
 	console.log('Worker may not be alive? '+err);
 });
 
-// Create an object of the specified methods, so they can be called directly instead of using .call()
-var theModule = someModule.shortMethods('rejectMe','intervalTest','yo');
+// Above methods were done via .call
+// Below methods are done via a Proxy object at .methods (each property returns a function that does .call automatically)
 
 // This method will always fail
-theModule.rejectMe().then(function(result){
+someModule.methods.rejectMe().then(function(result){
 	console.log('rejectMe: Then Result:',result);
 },function(result){
 	// On the requireWorker, there is a list of error codes which have a string representation of the error (handy for debugging)
@@ -39,7 +39,7 @@ theModule.rejectMe().then(function(result){
 
 // This method lets you use callbacks
 var intervalCount = 0;
-theModule.intervalTest('Foo',function(arg1,arg2){
+someModule.methods.intervalTest('Foo',function(arg1,arg2){
 	console.log('intervalTest:',arg1,arg2);
 	intervalCount++;
 	//if(intervalCount>=2) this.finish(); // This can be done. It will then internally ignore future callback calls
@@ -51,10 +51,35 @@ theModule.intervalTest('Foo',function(arg1,arg2){
 });
 
 // Call the 'yo' method that is actually on a worker within the main worker
-theModule.yo('John',function(msg){
+someModule.methods.yo('John',function(msg){
 	console.log('yo: CB Result:',msg);
 }).then(function(result){
 	console.log('yo: Func Result:',result);
 },function(err){
 	console.log('yo: Func Error:',err);
+});
+
+// This call promise also works with non-function properties, as if they were functions return their own value (as a promise though)
+someModule.methods.someValue().then(function(value){
+	console.log('someModule.methods.someValue:',value);
+});
+
+// Can also set the value with the first argument (results with new value)
+someModule.methods.someValue('Some other value').then(function(value){
+	console.log('someModule.methods.someValue has been set to:',value);
+});
+
+// It also works with functions! (only if the property exists already as a non-function type)
+// Set property onTest to a function
+someModule.methods.onTest(function(a,b,c){
+	console.log('onTest callback:',a+', '+b+', '+c);
+}).then(function(){
+	// Now all calls to onTest will work the other way
+	someModule.methods.onTest('Test 123','abc','Foo Bar').then(function(value){
+		// All Good
+	},function(err){
+		console.warn('Failed to call onTest:',requireWorker.errorList[err]);
+	});
+},function(err){
+	console.warn('Failed to set onTest:',requireWorker.errorList[err]);
 });
