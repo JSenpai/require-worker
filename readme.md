@@ -12,13 +12,150 @@ This module is meant to require other nodejs modules, but in a new process inste
 
 The usage is not quite the same, so look below for the examples.
 
-## Code Example
-
-TODO
-
 ## Installation
 
-```npm install require-worker```
+Install the module via [NPM](https://www.npmjs.com/package/require-worker)
+```
+npm install require-worker
+```
+Or download the files in the [git repository](https://github.com/Unchosen/require-worker)
+
+## Code Example
+These examples are also available under ./examples/
+
+### Main file / callee
+
+```javascript
+// Require the requireWorker
+var requireWorker = require('requireWorker.js');
+
+// requireWorker.require a module
+//var someModule = requireWorker.require('./aModule.js');
+//var someModule = requireWorker.require('./aModule.js',{ cwd:__dirname });
+var someModule = requireWorker.require(require.resolve('./module_a.js'));
+
+// Call the 'hello' method on the module (module.exports.hello)
+// The call method returns a Promise for success & failure
+someModule.call('hello','Foo').then(function(result){
+	// The promise will resolve when the module method returns a value other than undefined, or when they called this.finish()
+	console.log('hello: Result:',result);
+},function(err){
+	// On Error, if the error is generated internally, it will return a string number that will exist in .errorList. Otherwise the error message (or the reject message) will show.
+	if(err in requireWorker.errorList) console.log('hello: Error:',result,requireWorker.errorList[err]);
+	else console.warn('hello: Error:',err);
+});
+
+// Call the 'hello' method on the module (module.exports.hello)
+someModule.call('hai','Bar').then(function(result){
+	console.log('hai: Result:',result);
+});
+
+// Call a null method, which only exists within the requireWorker code (handy to test if worker is still alive)
+someModule.call(null).then(function(){
+	console.log('Worker is still alive');
+},function(err){
+	console.log('Worker may not be alive? '+err);
+});
+
+// The above methods were done via .call
+// Below methods are done via a Proxy object at .methods (each property returns a function that does .call automatically)
+
+// This method will always fail
+someModule.methods.rejectMe().then(function(result){
+	console.log('rejectMe: Then Result:',result);
+},function(result){
+	// On the requireWorker, there is a list of error codes which have a string representation of the error (handy for debugging)
+	if(result in requireWorker.errorList) console.log('rejectMe: Catch Error:',result,requireWorker.errorList[result]);
+	else console.log('rejectMe: Catch Error:',result);
+});
+
+// This method lets you use callbacks (anonymous function as an argument)
+var intervalCount = 0;
+someModule.methods.intervalTest('Foo',function(arg1,arg2){
+	console.log('intervalTest:',arg1,arg2);
+	intervalCount++;
+	//if(intervalCount>=2) this.finish(); // If .finish is called on this side, it will internally ignore future callback calls
+},function(){
+	console.log('intervalTest:','second callback');
+}).then(function(){
+	// The callbacks will no longer be called
+	console.log('intervalTest:','promise done');
+});
+
+// This call promise also works with non-function properties, as if they were functions returning their own value
+someModule.methods.someValue().then(function(value){
+	console.log('someModule.methods.someValue:',value);
+});
+// Can also set the value with the first argument (results with new value)
+someModule.methods.someValue('Some other value').then(function(value){
+	console.log('someModule.methods.someValue has been set to:',value);
+});
+// It also works with functions! (only if the property exists already as a non-function type. eg: null)
+// Set property onTest to a function
+someModule.methods.onTest(function(a,b,c){
+	console.log('onTest callback:',a+', '+b+', '+c);
+}).then(function(){
+	// Now all calls to onTest will work the other way
+	someModule.methods.onTest('Test 123','abc','Foo Bar').then(function(value){
+		// All Good
+	},function(err){
+		console.warn('Failed to call onTest:',requireWorker.errorList[err]);
+	});
+},function(err){
+	console.warn('Failed to set onTest:',requireWorker.errorList[err]);
+});
+```
+
+### Module File
+```javascript
+// Initialise the worker
+// If the 'module' object is passed, then the host calls will use the methods on module.exports
+// If 'exports' does not exist in the object passed, then the object itself will be where the methods are called on.
+require('requireWorker.js').initModule(module);
+
+// Some non-function properties
+module.exports.someValue = 'Foo Bar';
+module.exports.onTest = null;
+
+// Declare some methods
+// hello method (always return)
+module.exports.hello = function(name){
+	// Simply return the result (finishes promise internally)
+	return 'Hello '+(name||'World')+'!';
+};
+
+// hai method (always finish)
+module.exports.hai = function(name){
+	// Finish the promise (async method) with the result
+	this.finish('Hello '+(name||'World')+'!');
+	// If the function returns something (that is not undefined), it will use that as the result instead and all future promise finishes/rejects are ignored
+};
+
+// rejectMe method (always reject)
+module.exports.rejectMe = function(){
+	// Always reject
+	this.reject('Rejected');
+};
+
+// intervalTest method. This creates a timer which calls a callback.
+module.exports.intervalTest = function(text,callback1,callback2){
+	var self = this;
+	var count = 0;
+	// Set an interval to call a callback every x seconds
+	var tmr = setInterval(function(){
+		callback1(text,new Date().toLocaleString());
+		count++;
+		if(count>=5){
+			// Stop the timer and finish the promise
+			callback2();
+			self.finish();
+			clearInterval(tmr);
+		}
+	},1000);
+};
+
+// Note that you can also require another module with requireWorker within this module
+```
 
 ## API Reference
 
@@ -26,11 +163,13 @@ TODO
 
 **worker.call(methodName,arguments..)** call a method on the module/worker. Returns a promise
 
-**worker.methods[methodName](arguments..)** call a method on the module/worker. Returns a promise. If the property is a non-function in the module, it results with the value, or it set's the value if an argument is specified.
+**worker.methods.property(arguments..)** call a method on the module/worker. Returns a promise. If the property is a non-function in the module, it results with the value, or it set's the value if an argument is specified.
 	
 **worker.kill()** kill the worker (unload module)
 	
 **requireWorker.initModule(module)** initialise the require-worker for the required module
+
+See the examples above for more information.
 
 ## Tests
 
@@ -46,7 +185,7 @@ All the help is appreciated.
 
 MIT License
 
-Copyright (c) [2016] [Jason Sheppard]
+Copyright (c) 2016 Jason Sheppard
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

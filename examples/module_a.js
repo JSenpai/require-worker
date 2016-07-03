@@ -5,35 +5,41 @@
 // If 'exports' does not exist in the object passed, then the object itself will be where the methods are called on.
 require('../requireWorker.js').initModule(module);
 
+// Some non-function properties
 module.exports.someValue = 'Foo Bar';
 module.exports.onTest = null;
 
+// Declare some methods
+// hello method (always return)
 module.exports.hello = function(name){
 	// Simply return the result (finishes promise internally)
 	return 'Hello '+(name||'World')+'!';
 };
 
+// hai method (always finish)
 module.exports.hai = function(name){
 	// Finish the promise (async method) with the result
 	this.finish('Hello '+(name||'World')+'!');
 	// If the function returns something (that is not undefined), it will use that as the result instead and all future promise finishes/rejects are ignored
 };
 
+// rejectMe method (always reject)
 module.exports.rejectMe = function(){
 	// Always reject
 	this.reject('Rejected');
 };
 
-module.exports.intervalTest = function(arg1,cb,cb2){
+// intervalTest method. This creates a timer which calls a callback.
+module.exports.intervalTest = function(text,callback1,callback2){
 	var self = this;
 	var count = 0;
 	// Set an interval to call a callback every x seconds
 	var tmr = setInterval(function(){
-		cb(arg1,new Date().toLocaleString());
+		callback1(text,new Date().toLocaleString());
 		count++;
 		if(count>=5){
 			// Stop the timer and finish the promise
-			cb2();
+			callback2();
 			self.finish();
 			clearInterval(tmr);
 		}

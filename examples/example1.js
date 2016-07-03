@@ -6,13 +6,17 @@ var requireWorker = require('../requireWorker.js');
 //var someModule = requireWorker.require('./aModule.js',{ cwd:__dirname });
 var someModule = requireWorker.require(require.resolve('./module_a.js'));
 
-// The call method return a Promise for success & failure
 // Call the 'hello' method on the module (module.exports.hello)
+// The call method returns a Promise for success & failure
 someModule.call('hello','Foo').then(function(result){
+	// The promise will resolve when the module method returns a value other than undefined, or when they called this.finish()
 	console.log('hello: Result:',result);
+},function(err){
+	// On Error, if the error is generated internally, it will return a string number that will exist in .errorList. Otherwise the error message (or the reject message) will show.
+	if(err in requireWorker.errorList) console.log('hello: Error:',result,requireWorker.errorList[err]);
+	else console.warn('hello: Error:',err);
 });
 
-// The call method return a Promise for success & failure
 // Call the 'hello' method on the module (module.exports.hello)
 someModule.call('hai','Bar').then(function(result){
 	console.log('hai: Result:',result);
@@ -37,12 +41,12 @@ someModule.methods.rejectMe().then(function(result){
 	else console.log('rejectMe: Catch Error:',result);
 });
 
-// This method lets you use callbacks
+// This method lets you use callbacks (anonymous function as an argument)
 var intervalCount = 0;
 someModule.methods.intervalTest('Foo',function(arg1,arg2){
 	console.log('intervalTest:',arg1,arg2);
 	intervalCount++;
-	//if(intervalCount>=2) this.finish(); // This can be done. It will then internally ignore future callback calls
+	//if(intervalCount>=2) this.finish(); // If .finish is called on this side, it will internally ignore future callback calls
 },function(){
 	console.log('intervalTest:','second callback');
 }).then(function(){
@@ -59,17 +63,15 @@ someModule.methods.yo('John',function(msg){
 	console.log('yo: Func Error:',err);
 });
 
-// This call promise also works with non-function properties, as if they were functions return their own value (as a promise though)
+// This call promise also works with non-function properties, as if they were functions returning their own value
 someModule.methods.someValue().then(function(value){
 	console.log('someModule.methods.someValue:',value);
 });
-
 // Can also set the value with the first argument (results with new value)
 someModule.methods.someValue('Some other value').then(function(value){
 	console.log('someModule.methods.someValue has been set to:',value);
 });
-
-// It also works with functions! (only if the property exists already as a non-function type)
+// It also works with functions! (only if the property exists already as a non-function type. eg: null)
 // Set property onTest to a function
 someModule.methods.onTest(function(a,b,c){
 	console.log('onTest callback:',a+', '+b+', '+c);
