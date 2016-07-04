@@ -2,7 +2,7 @@
   "name": "require-worker",
   "version": "0.0.8",
   "description": "Require differently. Load a module in a new process.",
-  "main": "requireWorker.js",
+  "main": "index.js",
   "directories": {
     "example": "examples"
   },
