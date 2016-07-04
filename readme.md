@@ -8,7 +8,7 @@ Loads a module in a new process. Ideally similar to require(), but in a differen
 
 ## What is this?
 
-This module is meant to require other nodejs modules, but in a new process instead of the same process.
+This module is meant to require other Nodejs modules, but in a new process instead of the same process.
 
 This is very new and features are still getting implemented.
 
@@ -31,7 +31,7 @@ More examples are available under ./examples/
 
 ```javascript
 // Require the requireWorker
-var requireWorker = require('requireWorker.js');
+var requireWorker = require('require-worker');
 
 // requireWorker.require a module
 var someModule = requireWorker.require(require.resolve('./module_a.js'));
@@ -137,7 +137,7 @@ path.normalize('/foo/bar//baz/asdf/quux/..').then(function(result){
 // If the 'module' object is passed, then the host calls will use the methods on module.exports
 // If 'exports' does not exist in the object passed, then the object itself will be where the methods are called on.
 // This initModule call is not needed if required with option: wrapRequire:true
-require('requireWorker.js').initModule(module);
+require('require-worker').initModule(module);
 
 // Some non-function properties
 module.exports.someValue = 'Foo Bar';
@@ -193,7 +193,7 @@ requireOptions (object):
 
 &nbsp; &nbsp; `cwd` - directory for the module to be forked under
 
-&nbsp; &nbsp; `wrapRequire` - true/false, true if requireWorker.initModule is not called in the module (a usual npm installed module or an internal nodejs module).
+&nbsp; &nbsp; `wrapRequire` - true/false, true if requireWorker.initModule is not called in the module (a usual npm installed module or an internal Nodejs module).
 
 **`worker.call(methodName[,arguments..])`** Call a method on the module/worker. Returns a promise
 
@@ -211,13 +211,13 @@ See the examples above for more information.
 
 ### Inputs / Outputs
 
-Default Input Arguments: `string`, `number`, `array`, `object`, `null`, `boolean` (the basic stuff that can be stringified with JSON in the nodejs [process IPC channel](https://nodejs.org/api/child_process.html))
+Default Input Arguments: `string`, `number`, `array`, `object`, `null`, `boolean` (the basic stuff that can be stringified with JSON in the Nodejs [process IPC channel](https://nodejs.org/api/child_process.html))
 
 Impemented Additional Input Arguments: `function` (as a callback only)
 
 Unavailable Input Arguments: `promise`, `undefined`, & others
 
-Default Output Results: `string`, `number`, `array`, `object`, `null`, `boolean` (the basic stuff that can be stringified with JSON in the nodejs [process IPC channel](https://nodejs.org/api/child_process.html))
+Default Output Results: `string`, `number`, `array`, `object`, `null`, `boolean` (the basic stuff that can be stringified with JSON in the Nodejs [process IPC channel](https://nodejs.org/api/child_process.html))
 
 Impemented Additional Output Results: none yet
 
@@ -256,6 +256,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Links
 
 Github Repository: [https://github.com/Unchosen/require-worker](https://github.com/Unchosen/require-worker)
 
