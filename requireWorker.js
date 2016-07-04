@@ -16,7 +16,11 @@ var workerChild = function(path,options){
 	var forkOpts = {};
 	if(!options) options = {};
 	if('cwd' in options) forkOpts.cwd = options.cwd;
-	this.child = require('child_process').fork(path,[],forkOpts);
+	if('wrapRequire' in options && options['wrapRequire']){
+		this.child = require('child_process').fork(__filename,['-wrapRequire',path],forkOpts);
+	} else {
+		this.child = require('child_process').fork(path,[],forkOpts);
+	}
 	this.funcsIndex = 0;
 	this.funcs = {};
 	this.callbacksIndex = 0;
@@ -102,9 +106,12 @@ workerChild.prototype = {
 };
 
 // module code
+var initModuleList = [];
 module.exports.initModule = function(module){
 	var moduleObj = (module && 'exports' in module) ? module : null;
 	var classObj = moduleObj ? module.exports : (module?module:{});
+	if(initModuleList.indexOf(classObj)!==-1) return classObj;
+	else initModuleList.push(classObj);
 	process.on('message',function(data){
 		//console.log('parent -> child :',data);
 		if('rwc' in data && 'method' in data.rwc && 'id' in data.rwc){
@@ -165,3 +172,8 @@ var moduleHandleOutData = function(mngObj,result,success){
 	mngObj.done = true;
 	process.send({ rwc:{ id:mngObj.funcID, success:success, result:result } });
 };
+
+if(require.main===module && process.argv.length===4 && process.argv[2]==='-wrapRequire'){
+	var moduleToRequire = require.resolve(process.argv[3]);
+	module.exports.initModule(require(moduleToRequire));
+}

@@ -3,6 +3,7 @@
 // Initialise the worker
 // If the 'module' object is passed, then the host calls will use the methods on module.exports
 // If 'exports' does not exist in the object passed, then the object itself will be where the methods are called on.
+// This initModule call is not needed if required with option: wrapRequire:true
 require('../requireWorker.js').initModule(module);
 
 // Some non-function properties

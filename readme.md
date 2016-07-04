@@ -34,6 +34,9 @@ var requireWorker = require('requireWorker.js');
 //var someModule = requireWorker.require('./aModule.js',{ cwd:__dirname });
 var someModule = requireWorker.require(require.resolve('./module_a.js'));
 
+// If the module does not have initModule code within it, simply pass the wrapRequire:true as an option
+//var someModule = requireWorker.require(require.resolve('./module_a.js'),{ wrapRequire:true });
+
 // Call the 'hello' method on the module (module.exports.hello)
 // The call method returns a Promise for success & failure
 someModule.call('hello','Foo').then(function(result){
@@ -111,6 +114,7 @@ someModule.methods.onTest(function(a,b,c){
 // Initialise the worker
 // If the 'module' object is passed, then the host calls will use the methods on module.exports
 // If 'exports' does not exist in the object passed, then the object itself will be where the methods are called on.
+// This initModule call is not needed if required with option: wrapRequire:true
 require('requireWorker.js').initModule(module);
 
 // Some non-function properties
