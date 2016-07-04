@@ -1,6 +1,6 @@
 {
   "name": "require-worker",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Require differently. Load a module in a new process.",
   "main": "index.js",
   "directories": {
@@ -8,8 +8,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no tests have been written yet\" && exit 1",
-	"example1": "node ./examples/example1.js",
-	"example2": "node ./examples/example2.js"
+    "example1": "node ./examples/example1.js",
+    "example2": "node ./examples/example2.js"
   },
   "repository": {
     "type": "git",
