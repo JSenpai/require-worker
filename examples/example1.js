@@ -1,6 +1,6 @@
 "use strict";
 
-var requireWorker = require('../requireWorker.js');
+var requireWorker = require('../index.js');
 
 //var someModule = requireWorker.require('./aModule.js');
 //var someModule = requireWorker.require('./aModule.js',{ cwd:__dirname });

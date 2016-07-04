@@ -4,7 +4,7 @@
 // If the 'module' object is passed, then the host calls will use the methods on module.exports
 // If 'exports' does not exist in the object passed, then the object itself will be where the methods are called on.
 // This initModule call is not needed if required with option: wrapRequire:true
-require('../requireWorker.js').initModule(module);
+require('../index.js').initModule(module);
 
 // Some non-function properties
 module.exports.someValue = 'Foo Bar';
@@ -48,7 +48,7 @@ module.exports.intervalTest = function(text,callback1,callback2){
 };
 
 // Require yet another worker within this worker
-var someOtherModule = require('../requireWorker.js').require('./module_b.js',{ cwd:__dirname });
+var someOtherModule = require('../index.js').require('./module_b.js',{ cwd:__dirname });
 
 // Map 'yo' to the new worker
 module.exports.yo = function(name,cb1){

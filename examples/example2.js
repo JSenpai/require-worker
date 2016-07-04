@@ -3,7 +3,7 @@
 // This example requires existing nodejs modules
 // Note: For internal modules, wrapRequire:true must be used as a require option
 // Some of these examples are from the Nodejs documentation
-var rw = require('require-worker');
+var rw = require('../index.js');
 
 // The OS module
 var osWorker = rw.require('os',{ wrapRequire:true }), os = osWorker.methods;
