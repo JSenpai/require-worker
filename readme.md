@@ -6,11 +6,15 @@
 
 Loads a module in a new process. Ideally similar to require(), but in a different thread/process.
 
-## Synopsis
+## What is this?
 
 This module is meant to require other nodejs modules, but in a new process instead of the same process.
 
-The usage is not quite the same, so look below for the examples.
+This is very new and features are still getting implemented.
+
+There are many cases where this will not work with existing modules which accept data types, or return data types that are not yet implemented. Though this is being worked on. See below for accepted inputs and outputs.
+
+The usage is not quite the same, so look at the examples and the API.
 
 ## Installation
 
@@ -18,10 +22,10 @@ Install the module via [NPM](https://www.npmjs.com/package/require-worker)
 ```
 npm install require-worker
 ```
-Or download the files in the [git repository](https://github.com/Unchosen/require-worker)
+Or download the files in the [git repository](https://github.com/Unchosen/require-worker) or those listed in the [latest releases](https://github.com/Unchosen/require-worker/releases).
 
 ## Code Example
-These examples are also available under ./examples/
+More examples are available under ./examples/
 
 ### Main file / callee
 
@@ -30,8 +34,6 @@ These examples are also available under ./examples/
 var requireWorker = require('requireWorker.js');
 
 // requireWorker.require a module
-//var someModule = requireWorker.require('./aModule.js');
-//var someModule = requireWorker.require('./aModule.js',{ cwd:__dirname });
 var someModule = requireWorker.require(require.resolve('./module_a.js'));
 
 // If the module does not have initModule code within it, simply pass the wrapRequire:true as an option
@@ -107,6 +109,26 @@ someModule.methods.onTest(function(a,b,c){
 },function(err){
 	console.warn('Failed to set onTest:',requireWorker.errorList[err]);
 });
+
+// Note: For internal Nodejs modules, and other modules installed via NPM, wrapRequire:true must be specified in the require options.
+
+// The Nodejs OS module
+var osWorker = requireWorker.require('os',{ wrapRequire:true }), os = osWorker.methods;
+os.arch().then(function(result){
+	console.log('os.arch result:',result);
+	osWorker.kill();
+});
+
+// The Nodejs Path module
+var pathWorker = requireWorker.require('path',{ wrapRequire:true }), path = pathWorker.methods;
+// Lets chain some promises
+path.normalize('/foo/bar//baz/asdf/quux/..').then(function(result){
+	console.log('path.normalize result:',result);
+	return path.resolve(result, '../hello/world')
+}).then(function(result){
+	console.log('path.resolve result:',result);
+	pathWorker.kill();
+});
 ```
 
 ### Module File
@@ -163,21 +185,47 @@ module.exports.intervalTest = function(text,callback1,callback2){
 
 ## API Reference
 
-**worker = requireWorker.require(modulePath,requireOptions)** require a new module/worker. Returns a worker object
+**`worker = requireWorker.require(modulePath[,requireOptions])`** Require a new module/worker. Returns a worker object
 
-**worker.call(methodName,arguments..)** call a method on the module/worker. Returns a promise
+modulePath (string): a module path. Use Nodejs's require.resolve(modulePath) if the module has a static or relative path.
 
-**worker.methods.property(arguments..)** call a method on the module/worker. Returns a promise. If the property is a non-function in the module, it results with the value, or it set's the value if an argument is specified.
-	
-**worker.kill()** kill the worker (unload module)
-	
-**requireWorker.initModule(module)** initialise the require-worker for the required module
+requireOptions (object):
+
+&nbsp; &nbsp; `cwd` - directory for the module to be forked under
+
+&nbsp; &nbsp; `wrapRequire` - true/false, true if requireWorker.initModule is not called in the module (a usual npm installed module or an internal nodejs module).
+
+**`worker.call(methodName[,arguments..])`** Call a method on the module/worker. Returns a promise
+
+methodName (string): the name of a function or property on the module.exports
+
+**`worker.methods.property([arguments..])`** Call a method on the module/worker. Returns a promise. If the property is a non-function in the module, it results with the value, or it set's the value if an argument is specified.
+
+.property (string): the name of a function or property on the module.exports
+
+**`worker.kill([killcode])`** Kill the worker (forcibly unload module)
+
+**`requireWorker.initModule(module)`** Initialise the requireWorker in the module. Returns `module.exports || module` (not needed if wrapRequire:true is used)
 
 See the examples above for more information.
 
+### Inputs / Outputs
+
+Default Input Arguments: `string`, `number`, `array`, `object`, `null`, `boolean` (the basic stuff that can be stringified with JSON in the nodejs [process IPC channel](https://nodejs.org/api/child_process.html))
+
+Impemented Additional Input Arguments: `function` (as a callback only)
+
+Unavailable Input Arguments: `promise`, `undefined`, & others
+
+Default Output Results: `string`, `number`, `array`, `object`, `null`, `boolean` (the basic stuff that can be stringified with JSON in the nodejs [process IPC channel](https://nodejs.org/api/child_process.html))
+
+Impemented Additional Output Results: none yet
+
+Unavailable Output Results: `function`, `new function` (with other functions or prototypes), `promise`, `undefined`, & others
+
 ## Tests
 
-TODO
+Todo
 
 ## Contributors
 
