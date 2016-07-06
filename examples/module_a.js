@@ -38,7 +38,7 @@ module.exports.intervalTest = function(text,callback1,callback2){
 	var tmr = setInterval(function(){
 		callback1(text,new Date().toLocaleString());
 		count++;
-		if(count>=5){
+		if(count>=3){
 			// Stop the timer and finish the promise
 			callback2();
 			self.finish();
