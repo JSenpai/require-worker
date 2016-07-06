@@ -53,6 +53,7 @@ someModule.methods.intervalTest('Foo',function(arg1,arg2){
 }).then(function(){
 	// The callbacks will no longer be called
 	console.log('intervalTest:','promise done');
+	someModule.kill();
 });
 
 // Call the 'yo' method that is actually on a worker within the main worker
