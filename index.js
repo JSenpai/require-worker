@@ -1,9 +1,9 @@
-/* global module,process,require,__filename,Function */
+/* global module,process,require,__filename,Function,Promise */
 "use strict";
 
 var childProcess = require('child_process');
 //var eventEmitter = require('events');
-module.exports = {};
+module.exports = { 'verboseIO':false };
 
 module.exports.errorList = {
 	'1' : 'Called method does not exist',
@@ -33,10 +33,15 @@ var workerChild = function(path,options){
 workerChild.prototype = {
 	call : function(method){
 		var args = Array.prototype.slice.call(arguments,1);
-		return this._dataHandler.createDirectCall(this._proxyObject.refID,method,args);
+		return this._dataHandler.createDirectCall(this._proxyObject.id,method,args);
 	},
 	kill : function(killCode){
 		this._child.kill(killCode);
+	},
+	callOptionsObject: function(options){
+		var obj = new this._dataHandler._funcObjTpl();
+		obj.callOptions = options;
+		return obj;
 	}
 };
 
@@ -62,17 +67,29 @@ var dataHandler = function(options){
 	}
 	this.proxyIndex = 0;
 	this.proxies = {};
+	this.proxyRefIndex = 0;
+	this.proxyRefs = {};
 	this.funcsIndex = 0;
 	this.funcs = {};
 	this.callbacksIndex = 0;
 	this.callbacks = {};
 	this.io.on('message',function(data){
-		//console.log('parent -> child :',data);
+		if(module.exports.verboseIO) console.log(self.type+' -> other :',data);
 		self.handleIncoming(data);
 	});
+	this._funcObjTpl = function(){};
 };
 dataHandler.prototype = {
-	createProxyObject: function(refID){
+	createProxyRef: function(exportsObj){
+		var self = this;
+		for(var i in self.proxyRefs){
+			if(self.proxyRefs[i].exports===exportsObj) return i;
+		}
+		var refID = self.proxyRefIndex++;
+		self.proxyRefs[refID] = { exports:exportsObj };
+		return refID;
+	},
+	createProxyObject: function(proxyRefID){
 		var self = this;
 		var proxyID = self.proxyIndex++;
 		var proxy = new Proxy(Object.create(null),{
@@ -87,7 +104,7 @@ dataHandler.prototype = {
 			}
 		});
 		self.proxies[proxyID] = proxy;
-		return { id:proxyID, proxy:proxy, refID:refID };
+		return { id:proxyID, proxy:proxy, refID:proxyRefID };
 	},
 	createDirectCall: function(proxyID,method,args){
 		var self = this;
@@ -95,9 +112,13 @@ dataHandler.prototype = {
 		if(self.type!=='host') throw Error("createDirectCall can only be done on host");
 		if(method===void 0) method = null;
 		var callID = self.funcsIndex++;
-		var hasCallbacks = false;
+		var hasCallbacks = false, callOptions;
 		for(var i=0,l=args.length; i<l; i++){
 			if(typeof(args[i])==='function'){ hasCallbacks = true; break; }
+			if(i===l-1 && typeof(args[i])==='object' && args[i] instanceof self._funcObjTpl){
+				if('callOptions' in args[i]) callOptions = args[i].callOptions;
+				args.splice(i,1);
+			}
 		}
 		if(hasCallbacks){
 			var callbacks = {}, cbAssoc = {};
@@ -109,26 +130,16 @@ dataHandler.prototype = {
 				args[i] = 0;
 				cbAssoc[i] = cbID;
 			}
-			var p = new Promise(function(finish,reject){
-				self.funcs[callID] = [finish,reject,{}];
-				self.io.send({ call:{ method:method, args:args, id:callID, callbacks:cbAssoc } });
-			});
-			p.options = function(options){
-				self.funcs[callID][2] = options;
-				return p;
-			};
-			return p;
+			var callObj = { id:callID, method:method, args:args, proxyRefID:proxyObject.refID, callbacks:cbAssoc };
 		} else {
-			var p = new Promise(function(finish,reject){
-				self.funcs[callID] = [finish,reject,{}];
-				self.io.send({ call:{ method:method, args:args, id:callID } });
-			});
-			p.options = function(options){
-				self.funcs[callID][2] = options;
-				return p;
-			};
-			return p;
+			var callObj = { id:callID, method:method, args:args, proxyRefID:proxyObject.refID };
 		}
+		if(typeof(callOptions)==='object') callObj.co = callOptions;
+		var p = new Promise(function(finish,reject){
+			self.funcs[callID] = [finish,reject];
+			self.io.send({ call:callObj });
+		});
+		return p;
 	},
 	createCallCallback: function(callbackID,obj){
 		var self = this;
@@ -154,7 +165,7 @@ dataHandler.prototype = {
 		}
 		return result;
 	},
-	handleCallResponseOut: function(callID,result,success){
+	handleCallResponseOut: function(callID,result,success,crObj){
 		var sendData = {};
 		if(result===void 0) sendData.type = 0;
 		else if(result===null || typeof(result)==='boolean' || typeof(result)==='number' || typeof(result)==='string'){ // Basic Data Types
@@ -173,31 +184,46 @@ dataHandler.prototype = {
 			sendData.type = 4;
 			// todo
 		}
-		else if(typeof(result)==='object'){
+		else if(typeof(result)==='object'){ // Normal Object
 			sendData.type = 2;
 			// todo: replace callback, promise and other data with filler data, and specify id's in other sendData fields
 			sendData.data = result;
+		} else { // Fallback to 'Basic Data'
+			sendData.type = 1;
+			sendData.data = result;
 		}
-		this.io.send({ callReply:{ id:callID, success:success, data:sendData } });
+		crObj = (typeof(crObj)==='object')?crObj:{};
+		crObj.id = callID;
+		crObj.success = success;
+		crObj.data = sendData;
+		this.io.send({ callReply:crObj });
 	},
 	handleIncoming: function(data){
 		var self = this;
 		var call = (self.type==='worker' && 'call' in data) ? data.call : false;
 		if(call && 'method' in call && 'id' in call){
 			var method = call.method;
-			if(method===null) return self.io.send({ callReply:{ id:call.id, success:true, result:call.args } });
-			if(self.workerModule && self.workerExports!==self.workerModule.exports) self.workerExports = self.workerModule.exports;
-			var methodExists = (method in self.workerExports), methodIsFunction = (typeof(self.workerExports[method])==='function');
+			if(method===null) return self.handleCallResponseOut(call.id,call.args,true);
+			var callOptions = ('co' in call) ? call.co : {};
+			var exportsObj;
+			if(call.proxyRefID!==null && call.proxyRefID in self.proxyRefs){
+				exportsObj = self.proxyRefs[call.proxyRefID].exports;
+			} else {
+				if(self.workerModule && self.workerExports!==self.workerModule.exports) self.workerExports = self.workerModule.exports;
+				exportsObj = self.workerExports;
+			}
+			var methodExists = (method in exportsObj), methodIsFunction = (typeof(exportsObj[method])==='function');
 			if(methodExists && methodIsFunction){
 				// Call the function
 				var obj = { done:false };
-				var callOptions = ('callOptions' in call)?call.options:{};
 				new Promise(function(finish,reject){
 					var args = ('args' in call)?call.args:[];
 					if('callbacks' in call) for(var i in call.callbacks){
 						args[parseInt(i)] = self.createCallCallback(call.callbacks[i],obj); 
 					}
-					var r = self.workerExports[method].apply({ finish:finish, reject:reject },args);
+					// todo: use callOption ('newInstance'===true) to do a 'new' of the method instead (what to do about finish/reject)?
+					// todo: have 'finish' and 'reject' method names configurable using callOptions
+					var r = exportsObj[method].apply({ finish:finish, reject:reject },args);
 					if(r===void 0 && 'allowUndefined' in callOptions && callOptions.allowUndefined!==false) finish(callOptions.allowUndefined);
 					else if(r!==void 0) finish(r);
 				}).then(function(result){
@@ -210,18 +236,18 @@ dataHandler.prototype = {
 			} else if(methodExists && !methodIsFunction){
 				// Get the property
 				if(!('args' in call) || call.args.length===0){
-					self.io.send({ callReply:{ id:call.id, success:true, result:self.workerExports[method] } });
+					self.handleCallResponseOut(call.id,exportsObj[method],true);
 				}
 				// Set the property
 				else if('args' in call && call.args.length===1 && 'callbacks' in call){
-					self.workerExports[method] = function(){
+					exportsObj[method] = function(){
 						self.io.send({ callbackReply:{ id:call.callbacks['0'], args:Array.prototype.slice.call(arguments) } });
 						return true;
 					};
-					self.io.send({ callReply:{ id:call.id, success:true, keepCallbacks:true, result:null } });
+					self.handleCallResponseOut(call.id,null,true,{ keepCallbacks:true });
 				} else if('args' in call && call.args.length===1) {
-					self.workerExports[method] = call.args[0];
-					self.io.send({ callReply:{ id:call.id, success:true, result:self.workerExports[method] } });
+					exportsObj[method] = call.args[0];
+					self.handleCallResponseOut(call.id,exportsObj[method],true);
 				} else {
 					self.io.send({ callReply:{ id:call.id, errCode:2 } });
 				}
