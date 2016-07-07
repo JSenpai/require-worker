@@ -23,6 +23,14 @@ someModule.call('hai','Bar').then(function(result){
 	console.log('hai: Result:',result);
 });
 
+// Call the 'returnTest' method on the module (module.exports.returnTest)
+// Set the last call argument as a callOptions object so we can set some options.
+// The 'allowUndefined' option allows an 'undefined' function return to finish the promise.
+// The result is set to the value of the allowUndefined option.
+someModule.call('returnTest','returnTest: Hello World',someModule.callOptionsObject({ allowUndefined:null })).then(function(result){
+	console.log('returnTest:',(result===null?'Success':result));
+});
+
 // Call a null method, which only exists within the requireWorker code (handy to test if worker is still alive)
 someModule.call(null).then(function(){
 	console.log('Worker is still alive');
