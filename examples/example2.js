@@ -4,7 +4,7 @@
 // Note: For internal modules, wrapRequire:true must be used as a require option
 // Some of these examples are from the Nodejs documentation
 var rw = require('../index.js');
-rw.verboseIO = false;
+//rw.options.verboseIO = true;
 
 // The OS module
 var osWorker = rw.require('os',{ wrapRequire:true }), os = osWorker.methods;
@@ -26,14 +26,20 @@ path.normalize('/foo/bar//baz/asdf/quux/..').then(function(result){
 
 // The Events module
 var eventsWorker = rw.require('events',{ wrapRequire:true });
-var newEventEmitterPromise = eventsWorker.call(null,eventsWorker.callOptionsObject({ newSelf:true }));
+// Create a shortcut for callOptions
+var callOptions = eventsWorker.callOptionsObject.bind(eventsWorker);
+// Call a 'new' eventEmiiter
+//var newEventEmitterPromise = eventsWorker.call(null,eventsWorker.callOptionsObject({ newInstance:true }));
+var newEventEmitterPromise = new eventsWorker.call(null);
 newEventEmitterPromise.then(function(result){
+	// since this was a 'new' call, it returns a proxy. so use result.methods like we do above for the rw.require(). result.call() is also available.
 	var events = result.methods;
-	events.once('test',function(arg1,arg2){ // This callback is not triggering?
+	events.once('test',function(arg1,arg2){
 		console.log('eventEmitter .once .emit - test:',arg1,arg2);
 		eventsWorker.kill();
-	},eventsWorker.callOptionsObject({ ignoreResult:true })).then(function(){});
-	events.emit('test','foo','bar',eventsWorker.callOptionsObject({ ignoreResult:true })).then(function(){});
+	},callOptions({ ignoreResult:true })).then(function(){});
+	// Pass ignoreResult so undefined returns can finish the promise, and so callbacks continue to work.
+	events.emit('test','foo','bar',callOptions({ ignoreResult:true })).then(function(){});
 });
 
 // The Crypto module

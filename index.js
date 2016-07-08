@@ -101,6 +101,15 @@ dataHandler.prototype = {
 		if(!targetObject) targetObject = Object.create(null);
 		var call = function(method){
 			var args = Array.prototype.slice.call(arguments,1);
+			if(this && 'constructor' in this && (this.constructor===call || this.constructor instanceof call)){
+				if(args.length>0 && typeof(args[args.length-1])==='object' && args[args.length-1] instanceof dataHandler._funcObjTpl){
+					args[args.length-1].callOptions.newInstance = true;
+				} else {
+					var obj = new dataHandler._funcObjTpl();
+					obj.callOptions = { newInstance:true };
+					args.push(obj);
+				}
+			}
 			return self.createDirectCall(proxyID,method,args);
 		};
 		var proxy = new Proxy(targetObject,{
@@ -108,7 +117,7 @@ dataHandler.prototype = {
 				//console.log('proxy '+proxyID+':'+proxyRefID+' get '+name+' on',target);
 				if(name==='constructor') return void 0;
 				if(name in target) return target[name];
-				return call.bind(null,[name]);
+				return call.bind(null,name);
 			},
 			set: function(target, name, value){
 				return call(name,value);
@@ -223,10 +232,10 @@ dataHandler.prototype = {
 		if(call && 'method' in call && 'id' in call){
 			var method = call.method;
 			var callOptions = ('co' in call) ? call.co : {};
-			var newSelf = ('newSelf' in callOptions && callOptions.newSelf);
+			var newInstance = ('newInstance' in callOptions && callOptions.newInstance);
 			var useReturnOnly = ('useReturnOnly' in callOptions && callOptions.useReturnOnly);
 			var ignoreResult = ('ignoreResult' in callOptions && callOptions.ignoreResult);
-			if(method===null && !newSelf) return self.handleCallResponseOut(call.id,call.args,true);
+			if(method===null && !newInstance) return self.handleCallResponseOut(call.id,call.args,true);
 			var exportsObj;
 			if(call.proxyRefID!==null && call.proxyRefID in self.proxyRefs){
 				exportsObj = self.proxyRefs[call.proxyRefID].exports;
@@ -235,7 +244,7 @@ dataHandler.prototype = {
 				exportsObj = self.workerExports;
 			}
 			var methodExists = (method in exportsObj), methodIsFunction = (typeof(exportsObj[method])==='function');
-			if(!method && newSelf){
+			if(!method && newInstance){
 				result = new (Function.prototype.bind.apply(exportsObj,args));
 				self.handleCallResponseOut(call.id,result,true);
 			} else if(methodExists && methodIsFunction){
@@ -246,7 +255,7 @@ dataHandler.prototype = {
 					if('callbacks' in call) for(var i in call.callbacks){
 						args[parseInt(i)] = self.createCallCallback(call.callbacks[i],obj); 
 					}
-					if('newInstance' in callOptions && callOptions.newInstance){
+					if(newInstance){
 						result = new exportsObj[method].apply(exportsObj,args);
 					} else if(useReturnOnly || ignoreResult){
 						result = exportsObj[method].apply(exportsObj,args);
