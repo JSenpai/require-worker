@@ -3,7 +3,7 @@
 
 var childProcess = require('child_process');
 //var eventEmitter = require('events');
-module.exports = { 'verboseIO':false };
+module.exports.options = { 'verboseIO':false };
 
 module.exports.errorList = {
 	'1' : 'Called method does not exist',
@@ -29,17 +29,14 @@ var workerChild = function(path,options){
 	this._dataHandler = new dataHandler({ io:child, type:'host' });
 	this._proxyObject = this._dataHandler.createProxyObject(null);
 	this.methods = this._proxyObject.proxy;
+	this.call = this._proxyObject.call;
 };
 workerChild.prototype = {
-	call : function(method){
-		var args = Array.prototype.slice.call(arguments,1);
-		return this._dataHandler.createDirectCall(this._proxyObject.id,method,args);
-	},
 	kill : function(killCode){
 		this._child.kill(killCode);
 	},
 	callOptionsObject: function(options){
-		var obj = new this._dataHandler._funcObjTpl();
+		var obj = new dataHandler._funcObjTpl();
 		obj.callOptions = options;
 		return obj;
 	}
@@ -67,18 +64,26 @@ var dataHandler = function(options){
 	}
 	this.proxyIndex = 0;
 	this.proxies = {};
+	this.proxiesByRefs = {};
 	this.proxyRefIndex = 0;
 	this.proxyRefs = {};
 	this.funcsIndex = 0;
 	this.funcs = {};
 	this.callbacksIndex = 0;
 	this.callbacks = {};
+	if(this.type==='host'){
+		this.io.send({ options:module.exports.options });
+	}
 	this.io.on('message',function(data){
-		if(module.exports.verboseIO) console.log(self.type+' -> other :',data);
+		if(typeof(data)==='object' && 'options' in data){
+			module.exports.options = data.options;
+		}
+		if(module.exports.options.verboseIO) console.log((self.type==='host'?'worker':'host')+' -> '+self.type+' :',data);
 		self.handleIncoming(data);
 	});
 	this._funcObjTpl = function(){};
 };
+dataHandler._funcObjTpl = function(){};
 dataHandler.prototype = {
 	createProxyRef: function(exportsObj){
 		var self = this;
@@ -89,22 +94,31 @@ dataHandler.prototype = {
 		self.proxyRefs[refID] = { exports:exportsObj };
 		return refID;
 	},
-	createProxyObject: function(proxyRefID){
+	createProxyObject: function(proxyRefID,targetObject){
 		var self = this;
+		if(proxyRefID in self.proxiesByRefs) return self.proxiesByRefs[proxyRefID];
 		var proxyID = self.proxyIndex++;
-		var proxy = new Proxy(Object.create(null),{
+		if(!targetObject) targetObject = Object.create(null);
+		var call = function(method){
+			var args = Array.prototype.slice.call(arguments,1);
+			return self.createDirectCall(proxyID,method,args);
+		};
+		var proxy = new Proxy(targetObject,{
 			get: function(target, name){
-				return function(){
-					var args = Array.prototype.slice.call(arguments);
-					return self.createDirectCall(proxyID,name,args);
-				};
+				//console.log('proxy '+proxyID+':'+proxyRefID+' get '+name+' on',target);
+				if(name==='constructor') return void 0;
+				if(name in target) return target[name];
+				return call.bind(null,[name]);
 			},
 			set: function(target, name, value){
-				return self.createDirectCall(proxyID,name,[value]);
+				return call(name,value);
+				//return self.createDirectCall(proxyID,name,[value]);
 			}
 		});
-		self.proxies[proxyID] = proxy;
-		return { id:proxyID, proxy:proxy, refID:proxyRefID };
+		var proxyObj = { id:proxyID, proxy:proxy, refID:proxyRefID, call:call };
+		self.proxies[proxyID] = proxyObj;
+		self.proxiesByRefs[proxyRefID] = proxyObj;
+		return proxyObj;
 	},
 	createDirectCall: function(proxyID,method,args){
 		var self = this;
@@ -114,8 +128,8 @@ dataHandler.prototype = {
 		var callID = self.funcsIndex++;
 		var hasCallbacks = false, callOptions;
 		for(var i=0,l=args.length; i<l; i++){
-			if(typeof(args[i])==='function'){ hasCallbacks = true; break; }
-			if(i===l-1 && typeof(args[i])==='object' && args[i] instanceof self._funcObjTpl){
+			if(typeof(args[i])==='function'){ hasCallbacks = true; continue; }
+			if(i===l-1 && typeof(args[i])==='object' && args[i] instanceof dataHandler._funcObjTpl){
 				if('callOptions' in args[i]) callOptions = args[i].callOptions;
 				args.splice(i,1);
 			}
@@ -147,55 +161,60 @@ dataHandler.prototype = {
 			if(!obj.done) self.io.send({ callbackReply:{ id:callbackID, args:Array.prototype.slice.call(arguments) } });
 		};
 	},
-	handleCallResponseIn: function(data){
+	handleCallResponseIn: function(resultData){
+		var self = this;
 		var result = void 0;
-		if(data.type===1) result = data.data; // Basic Data Types
-		else if(data.type===2){ // Object
-			result = data.data;
-			// todo: fill in callback, promise and other data
+		if(resultData.type===1) result = resultData.data; // Basic Data Types
+		else if(resultData.type===2){ // Object
+			result = resultData.data;
+			// todo: fill in callback, promise and other resultData
 		}
-		else if(data.type===3){ // Normal Function
-			// todo
+		else if(resultData.type===3){ // Normal Function
+			result = this.createCallCallback(resultData.callbackID,{});
 		}
-		else if(data.type===4){ // 'new' Function
-			// todo
+		else if(resultData.type===4){ // 'new' Function
+			var proxy = this.createProxyObject(resultData.proxyRefID,{ toJSON:function(){ return '{}'; }, inspect:function(){ return '{}'; } });
+			result = { methods:proxy.proxy, call:proxy.call }; 
 		}
-		else if(data.type===5){ // Promise
-			// todo
+		else if(resultData.type===5){ // Promise - Not yet tested!
+			var proxy = this.createProxyObject(resultData.proxyRefID);
+			result = proxy.proxy;
 		}
 		return result;
 	},
 	handleCallResponseOut: function(callID,result,success,crObj){
-		var sendData = {};
-		if(result===void 0) sendData.type = 0;
+		var resultData = {};
+		if(result===void 0) resultData.type = 0;
 		else if(result===null || typeof(result)==='boolean' || typeof(result)==='number' || typeof(result)==='string'){ // Basic Data Types
-			sendData.type = 1;
-			sendData.data = result;
+			resultData.type = 1;
+			resultData.data = result;
 		}
-		else if(typeof(result)==='object' && result instanceof Promise){ // Promise
-			sendData.type = 5;
-			// todo
+		else if(typeof(result)==='object' && result instanceof Promise){ // Promise - Not yet tested!
+			resultData.type = 5;
+			resultData.proxyRefID = this.createProxyRef(result);
 		}
 		else if(typeof(result)==='function'){ // Normal Function
-			sendData.type = 3;
-			// todo
+			resultData.type = 3;
+			var cbID = this.callbacksIndex++;
+			this.callbacks[cbID] = [callID,result];
+			resultData.callbackID = cbID;
 		}
 		else if(typeof(result)==='object' && 'constructor' in result && result.constructor instanceof Function){ // 'new' Function
-			sendData.type = 4;
-			// todo
+			resultData.type = 4;
+			resultData.proxyRefID = this.createProxyRef(result);
 		}
 		else if(typeof(result)==='object'){ // Normal Object
-			sendData.type = 2;
-			// todo: replace callback, promise and other data with filler data, and specify id's in other sendData fields
-			sendData.data = result;
+			resultData.type = 2;
+			// todo: replace callback, promise and other data with filler data, and specify id's in other resultData fields
+			resultData.data = result;
 		} else { // Fallback to 'Basic Data'
-			sendData.type = 1;
-			sendData.data = result;
+			resultData.type = 1;
+			resultData.data = result;
 		}
 		crObj = (typeof(crObj)==='object')?crObj:{};
 		crObj.id = callID;
 		crObj.success = success;
-		crObj.data = sendData;
+		crObj.data = resultData;
 		this.io.send({ callReply:crObj });
 	},
 	handleIncoming: function(data){
@@ -203,8 +222,11 @@ dataHandler.prototype = {
 		var call = (self.type==='worker' && 'call' in data) ? data.call : false;
 		if(call && 'method' in call && 'id' in call){
 			var method = call.method;
-			if(method===null) return self.handleCallResponseOut(call.id,call.args,true);
 			var callOptions = ('co' in call) ? call.co : {};
+			var newSelf = ('newSelf' in callOptions && callOptions.newSelf);
+			var useReturnOnly = ('useReturnOnly' in callOptions && callOptions.useReturnOnly);
+			var ignoreResult = ('ignoreResult' in callOptions && callOptions.ignoreResult);
+			if(method===null && !newSelf) return self.handleCallResponseOut(call.id,call.args,true);
 			var exportsObj;
 			if(call.proxyRefID!==null && call.proxyRefID in self.proxyRefs){
 				exportsObj = self.proxyRefs[call.proxyRefID].exports;
@@ -213,25 +235,38 @@ dataHandler.prototype = {
 				exportsObj = self.workerExports;
 			}
 			var methodExists = (method in exportsObj), methodIsFunction = (typeof(exportsObj[method])==='function');
-			if(methodExists && methodIsFunction){
+			if(!method && newSelf){
+				result = new (Function.prototype.bind.apply(exportsObj,args));
+				self.handleCallResponseOut(call.id,result,true);
+			} else if(methodExists && methodIsFunction){
 				// Call the function
 				var obj = { done:false };
 				new Promise(function(finish,reject){
-					var args = ('args' in call)?call.args:[];
+					var result, args = ('args' in call)?call.args:[];
 					if('callbacks' in call) for(var i in call.callbacks){
 						args[parseInt(i)] = self.createCallCallback(call.callbacks[i],obj); 
 					}
-					// todo: use callOption ('newInstance'===true) to do a 'new' of the method instead (what to do about finish/reject)?
-					// todo: have 'finish' and 'reject' method names configurable using callOptions
-					var r = exportsObj[method].apply({ finish:finish, reject:reject },args);
-					if(r===void 0 && 'allowUndefined' in callOptions && callOptions.allowUndefined!==false) finish(callOptions.allowUndefined);
-					else if(r!==void 0) finish(r);
+					if('newInstance' in callOptions && callOptions.newInstance){
+						result = new exportsObj[method].apply(exportsObj,args);
+					} else if(useReturnOnly || ignoreResult){
+						result = exportsObj[method].apply(exportsObj,args);
+					} else {
+						// todo: have 'finish' and 'reject' method names configurable using callOptions
+						result = exportsObj[method].apply({ finish:finish, reject:reject },args);
+						if(result===exportsObj) result = null; // could possibly return something that says it's the same as the proxy
+					}
+					//console.log('call '+method+' result',result,'callOptions',callOptions);
+					if(ignoreResult) result = null;
+					if(result===void 0 && 'allowUndefined' in callOptions && callOptions.allowUndefined!==false) finish(callOptions.allowUndefined);
+					else if(result!==void 0) finish(result);
 				}).then(function(result){
-					obj.done = true;
-					self.handleCallResponseOut(call.id,result,true);
+					var keepCallbacks = ignoreResult;
+					if(!keepCallbacks) obj.done = true;
+					self.handleCallResponseOut(call.id,result,true,{ keepCallbacks:keepCallbacks });
 				},function(result){
-					obj.done = true;
-					self.handleCallResponseOut(call.id,result,false);
+					var keepCallbacks = ignoreResult;
+					if(!keepCallbacks) obj.done = true;
+					self.handleCallResponseOut(call.id,result,false,{ keepCallbacks:keepCallbacks });
 				});
 			} else if(methodExists && !methodIsFunction){
 				// Get the property
@@ -252,7 +287,7 @@ dataHandler.prototype = {
 					self.io.send({ callReply:{ id:call.id, errCode:2 } });
 				}
 			} else {
-				self.io.send({ callReply:{ id:call.id, errCode:1 } });
+				self.io.send({ callReply:{ id:call.id, errCode:1, method:method } });
 			}
 		}
 		var callReply = (self.type==='host' && 'callReply' in data) ? data.callReply : false;
