@@ -4,211 +4,114 @@
 [![NPM Version][npm-image]][npm-url]
 [![Downloads Stats][npm-downloads]][npm-url]
 
-Loads a module in a new process. Ideally similar to require(), but in a different thread/process.
+Load a module in a new process. Ideally similar to Nodejs's require().
 
 ## What is this?
 
 This module is meant to require other Nodejs modules, but in a new process instead of the same process.
 
-This is very new and features are still getting implemented.
+This is very new, experimental and features are still getting implemented.
 
-There are many cases where this will not work with existing modules which accept data types, or return data types that are not yet implemented. Though this is being worked on. See below for accepted inputs and outputs.
-
-The usage is not quite the same, so look at the examples and the API.
+There are many cases where this will not work with existing modules which accept data types, or return data types that are not yet implemented. Though this is being worked on. See the API below.
 
 ## Installation
 
 Install the module via [NPM](https://www.npmjs.com/package/require-worker)
 ```
-npm install require-worker
+npm install require-worker --save
 ```
-Or download the files in the [git repository](https://github.com/Unchosen/require-worker) or those listed in the [latest releases](https://github.com/Unchosen/require-worker/releases).
+Or [download the latest release](https://github.com/Unchosen/require-worker/releases), or git clone the [repository on GitHub](https://github.com/Unchosen/require-worker).
 
-## Code Example
-More examples are available under ./examples/
+## Basic Usage Example
+More examples are available under the `examples/` directory.
 
-### Main file / callee
+### Main File / callee
 
 ```javascript
-// Require the requireWorker
+// require require-worker
 var requireWorker = require('require-worker');
+// require (using require-worker) a module
+var myModule = requireWorker.require(require.resolve('./myModule.js'));
 
-// requireWorker.require a module
-var someModule = requireWorker.require(require.resolve('./module_a.js'));
-
-// If the module does not have initModule code within it, simply pass the wrapRequire:true as an option
-//var someModule = requireWorker.require(require.resolve('./module_a.js'),{ wrapRequire:true });
-
-// Call the 'hello' method on the module (module.exports.hello)
-// The call method returns a Promise for success & failure
-someModule.call('hello','Foo').then(function(result){
-	// The promise will resolve when the module method returns a value other than undefined, or when they called this.finish()
-	console.log('hello: Result:',result);
-},function(err){
+// Call the 'hello' method with an argument. Then handle the promise.
+myModule.call('hello','Foo').then(function(result){
+	// The promise will resolve when the module method returns a value other than undefined, or when it calls this.finish()
+	console.log('hello: result:',result);
+}).catch(function(err){
 	// On Error, if the error is generated internally, it will return a string number that will exist in .errorList. Otherwise the error message (or the reject message) will show.
 	if(err in requireWorker.errorList) console.log('hello: Error:',result,requireWorker.errorList[err]);
 	else console.warn('hello: Error:',err);
 });
+// Make sure every promise has a .then and a .catch (or .then with 2 arguments as functions)
 
-// Call the 'hello' method on the module (module.exports.hello)
-someModule.call('hai','Bar').then(function(result){
-	console.log('hai: Result:',result);
-});
-
-// Call a null method, which only exists within the requireWorker code (handy to test if worker is still alive)
-someModule.call(null).then(function(){
-	console.log('Worker is still alive');
-},function(err){
-	console.log('Worker may not be alive? '+err);
-});
-
-// The above methods were done via .call
-// Below methods are done via a Proxy object at .methods (each property returns a function that does .call automatically)
-
-// This method will always fail
-someModule.methods.rejectMe().then(function(result){
-	console.log('rejectMe: Then Result:',result);
-},function(result){
-	// On the requireWorker, there is a list of error codes which have a string representation of the error (handy for debugging)
-	if(result in requireWorker.errorList) console.log('rejectMe: Catch Error:',result,requireWorker.errorList[result]);
-	else console.log('rejectMe: Catch Error:',result);
-});
-
-// This method lets you use callbacks (anonymous function as an argument)
-var intervalCount = 0;
-someModule.methods.intervalTest('Foo',function(arg1,arg2){
-	console.log('intervalTest:',arg1,arg2);
-	intervalCount++;
-	//if(intervalCount>=2) this.finish(); // If .finish is called on this side, it will internally ignore future callback calls
-},function(){
-	console.log('intervalTest:','second callback');
-}).then(function(){
-	// The callbacks will no longer be called
-	console.log('intervalTest:','promise done');
-	someModule.kill();
-});
-
-// This call promise also works with non-function properties, as if they were functions returning their own value
-someModule.methods.someValue().then(function(value){
-	console.log('someModule.methods.someValue:',value);
-});
-// Can also set the value with the first argument (results with new value)
-someModule.methods.someValue('Some other value').then(function(value){
-	console.log('someModule.methods.someValue has been set to:',value);
-});
-// It also works with functions! (only if the property exists already as a non-function type. eg: null)
-// Set property onTest to a function
-someModule.methods.onTest(function(a,b,c){
-	console.log('onTest callback:',a+', '+b+', '+c);
-}).then(function(){
-	// Now all calls to onTest will work the other way
-	someModule.methods.onTest('Test 123','abc','Foo Bar').then(function(value){
-		// All Good
-	},function(err){
-		console.warn('Failed to call onTest:',requireWorker.errorList[err]);
-	});
-},function(err){
-	console.warn('Failed to set onTest:',requireWorker.errorList[err]);
-});
-
-// Note: For internal Nodejs modules, and other modules installed via NPM, wrapRequire:true must be specified in the require options.
-
-// The Nodejs OS module
-var osWorker = requireWorker.require('os',{ wrapRequire:true }), os = osWorker.methods;
-os.arch().then(function(result){
-	console.log('os.arch result:',result);
-	osWorker.kill();
-});
-
-// The Nodejs Path module
-var pathWorker = requireWorker.require('path',{ wrapRequire:true }), path = pathWorker.methods;
-// Lets chain some promises
-path.normalize('/foo/bar//baz/asdf/quux/..').then(function(result){
-	console.log('path.normalize result:',result);
-	return path.resolve(result, '../hello/world')
+// Below, we call the 'yo' method on the .methods Proxy property (same as .call('yo','John'...))
+// Call the 'yo' method with a string argument, and a function argument.
+myModule.methods.yo('Bar',function(msg){
+	console.log('yo: callback result:',msg);
 }).then(function(result){
-	console.log('path.resolve result:',result);
-	pathWorker.kill();
+	console.log('yo: finish result:',result);
+}).catch(function(err){
+	console.log('yo: error:',err);
 });
 ```
 
 ### Module File
 ```javascript
 // Initialise the worker
-// If the 'module' object is passed, then the host calls will use the methods on module.exports
-// If 'exports' does not exist in the object passed, then the object itself will be where the methods are called on.
-// This initModule call is not needed if required with option: wrapRequire:true
 require('require-worker').initModule(module);
 
-// Some non-function properties
-module.exports.someValue = 'Foo Bar';
-module.exports.onTest = null;
-
-// Declare some methods
-// hello method (always return)
+// Hello method (always return)
 module.exports.hello = function(name){
 	// Simply return the result (finishes promise internally)
 	return 'Hello '+(name||'World')+'!';
 };
 
-// hai method (always finish)
-module.exports.hai = function(name){
-	// Finish the promise (async method) with the result
-	this.finish('Hello '+(name||'World')+'!');
-	// If the function returns something (that is not undefined), it will use that as the result instead and all future promise finishes/rejects are ignored
+// Yo method
+module.exports.yo = function(name,callback){
+	callback('Do you like pizza? I do.');
+	this.finish('Yo '+(name||'World')+'!');
 };
-
-// rejectMe method (always reject)
-module.exports.rejectMe = function(){
-	// Always reject
-	this.reject('Rejected');
-};
-
-// intervalTest method. This creates a timer which calls a callback.
-module.exports.intervalTest = function(text,callback1,callback2){
-	var self = this;
-	var count = 0;
-	// Set an interval to call a callback every x seconds
-	var tmr = setInterval(function(){
-		callback1(text,new Date().toLocaleString());
-		count++;
-		if(count>=3){
-			// Stop the timer and finish the promise
-			callback2();
-			self.finish();
-			clearInterval(tmr);
-		}
-	},1000);
-};
-
-// Note that you can also require another module with requireWorker within this module
 ```
 
 ## API Reference
 
-**`worker = requireWorker.require(modulePath[,requireOptions])`** Require a new module/worker. Returns a worker object
+**`worker = requireWorker.require(modulePath[,requireOptions])`** Require a new module/worker. Returns a worker object.
 
 modulePath (string): a module path. Use Nodejs's require.resolve(modulePath) if the module has a static or relative path.
 
 requireOptions (object):
 
-&nbsp; &nbsp; `cwd` - directory for the module to be forked under
+* `cwd`: directory for the module to be forked under
 
-&nbsp; &nbsp; `wrapRequire` - true/false, true if requireWorker.initModule is not called in the module (a usual npm installed module or an internal Nodejs module).
+* `wrapRequire`: true/false, true if requireWorker.initModule is not called in the module (a usual NPM installed module or an internal Nodejs module).
 
-**`worker.call(methodName[,arguments..])`** Call a method on the module/worker. Returns a promise
+**`worker.call(methodName[,arguments..][,callOptions])`** Call a method on the module/worker. Returns a promise.
 
 methodName (string): the name of a function or property on the module.exports
 
-**`worker.methods.property([arguments..])`** Call a method on the module/worker. Returns a promise. If the property is a non-function in the module, it results with the value, or it set's the value if an argument is specified.
+arguments (see inputs list below): values to pass to the method
 
-.property (string): the name of a function or property on the module.exports
+callOptions (callOptions object): the last argument can be a callOptions object created with `requireWorker.callOptions(options)`.
+
+&nbsp; &nbsp; options (object): (all optional) _(these may fix or cause errors & change module compatability)_
+
+* `newInstance`: true/false, call the method with a 'new' keyword (new worker.call(...) also works). Use `null` as the property value to call a new instance of the module.exports object itself (such as the Nodejs [EventEmitter](https://nodejs.org/api/events.html) module).
+
+* `useReturnOnly`: true/false, call the method with the module as the binding object, causing the promise to only finish with the result of the method's returned value.
+
+* `ignoreResult`: true/false, call the method with the module as the binding object. Finish the promise with `null` as the result.
+
+* `allowUndefined`: any/false, allow `undefined` as the module's return value, to finish the promise. The result is the value that `allowUndefined` is set to (except `false`).
+
+* `forceProxy`: true/false, force the result to be a proxy
+
+**`worker.methods.property([arguments..])`** the .methods property is a [JavaScript `Proxy`](https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Global_Objects/Proxy) which any property can be get, set or called on. The property name and it's arguments are passed to the .call method explained above.
 
 **`worker.kill([killcode])`** Kill the worker (forcibly unload module)
 
 **`requireWorker.initModule(module)`** Initialise the requireWorker in the module. Returns `module.exports || module` (not needed if wrapRequire:true is used)
 
-See the examples above for more information.
+See the examples for more understanding.
 
 ### Inputs / Outputs
 
@@ -220,13 +123,15 @@ Unavailable Input Arguments: `promise`, `undefined`, & others
 
 Default Output Results: `string`, `number`, `array`, `object`, `null`, `boolean` (the basic stuff that can be stringified with JSON in the Nodejs [process IPC channel](https://nodejs.org/api/child_process.html))
 
-Impemented Additional Output Results: none yet
+Impemented Additional Output Results: _constructed object_ (which is a JavaScript `Proxy`), `function` (simple callback which can have arguments. _Not a promise_. No return result)
 
-Unavailable Output Results: `function`, `new function` (with other functions or prototypes), `promise`, `undefined`, & others
+Unavailable Output Results: `promise`, `undefined` (unless `allowUndefined` is passed as a call option), & others.
+
+Support for additional inputs and outputs coming soon.
 
 ## Tests
 
-Todo
+Todo. Basically just run the examples for now and see if any errors show up.
 
 ## Contributors
 
