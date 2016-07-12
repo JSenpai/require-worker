@@ -95,3 +95,10 @@ someModule.methods.onTest(function(a,b,c){
 },function(err){
 	console.warn('Failed to set onTest:',requireWorker.errorList[err]);
 });
+
+someModule.methods.giveMeAFunction('Foo Bar').then(function(result){
+	console.log('giveMeAFunction: got function as result:',typeof(result)==='function'?true:false);
+	result('Hello');
+}).catch(function(err){
+	console.warn('giveMeAFunction: Failed',err);
+});

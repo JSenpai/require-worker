@@ -65,3 +65,9 @@ module.exports.yo = function(name,cb1){
 		self.rehect('Sub-Worker Error: '+err);
 	});
 };
+
+module.exports.giveMeAFunction = function(someText){
+	return function(prefixText){
+		console.log('giveMeAFunction: returned function was called.',prefixText+' '+someText+'.');
+	};
+};
