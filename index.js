@@ -2,8 +2,7 @@
 "use strict";
 
 var childProcess = require('child_process');
-//var eventEmitter = require('events');
-module.exports.options = { 'verboseIO':false };
+module.exports.options = { 'verboseIO':false, 'debugProxy':false };
 
 module.exports.errorList = {
 	'1' : 'Called method does not exist',
@@ -15,6 +14,14 @@ module.exports.errorList = {
 module.exports.require = function(path,options){
 	return new workerChild(path,options);
 };
+
+module.exports.callOptions = function(options){
+	var obj = new dataHandler._funcObjTpl();
+	obj.callOptions = options;
+	return obj;
+};
+
+module.exports.noOp = function noOp(){};
 
 var workerChild = function(path,options){
 	var child, forkOptions = {};
@@ -30,16 +37,14 @@ var workerChild = function(path,options){
 	this._proxyObject = this._dataHandler.createProxyObject(null);
 	this.methods = this._proxyObject.proxy;
 	this.call = this._proxyObject.call;
+	this.devObj = {}; // Safe object for developers to store stuff on
+	return Object.create(this); // Return an object with the workerChild as the prototype, so overwrites can be undone
 };
 workerChild.prototype = {
 	kill : function(killCode){
 		this._child.kill(killCode);
 	},
-	callOptionsObject: function(options){
-		var obj = new dataHandler._funcObjTpl();
-		obj.callOptions = options;
-		return obj;
-	}
+	callOptionsObject: module.exports.callOptions
 };
 
 // module code
@@ -88,18 +93,24 @@ dataHandler.prototype = {
 	createProxyRef: function(exportsObj){
 		var self = this;
 		for(var i in self.proxyRefs){
-			if(self.proxyRefs[i].exports===exportsObj) return i;
+			if(self.proxyRefs[i].exports===exportsObj){
+				self.proxyRefs[i].useCount++;
+				return i;
+			}
 		}
 		var refID = self.proxyRefIndex++;
-		self.proxyRefs[refID] = { exports:exportsObj };
+		self.proxyRefs[refID] = { exports:exportsObj, useCount:1 };
 		return refID;
 	},
 	createProxyObject: function(proxyRefID,targetObject){
 		var self = this;
-		if(proxyRefID in self.proxiesByRefs) return self.proxiesByRefs[proxyRefID];
+		if(proxyRefID in self.proxiesByRefs){
+			self.proxiesByRefs[proxyRefID].useCount++;
+			return self.proxiesByRefs[proxyRefID];
+		}
 		var proxyID = self.proxyIndex++;
 		if(!targetObject) targetObject = Object.create(null);
-		var call = function(method){
+		var call = function rwProxyCall(method){
 			var args = Array.prototype.slice.call(arguments,1);
 			if(this && 'constructor' in this && (this.constructor===call || this.constructor instanceof call)){
 				if(args.length>0 && typeof(args[args.length-1])==='object' && args[args.length-1] instanceof dataHandler._funcObjTpl){
@@ -114,17 +125,16 @@ dataHandler.prototype = {
 		};
 		var proxy = new Proxy(targetObject,{
 			get: function(target, name){
-				//console.log('proxy '+proxyID+':'+proxyRefID+' get '+name+' on',target);
+				if(module.exports.options.debugProxy) console.log('[rw-debug] proxy '+proxyID+':'+proxyRefID+' get '+name+' on',target);
 				if(name==='constructor') return void 0;
 				if(name in target) return target[name];
 				return call.bind(null,name);
 			},
 			set: function(target, name, value){
 				return call(name,value);
-				//return self.createDirectCall(proxyID,name,[value]);
 			}
 		});
-		var proxyObj = { id:proxyID, proxy:proxy, refID:proxyRefID, call:call };
+		var proxyObj = { id:proxyID, proxy:proxy, refID:proxyRefID, call:call, useCount:1 };
 		self.proxies[proxyID] = proxyObj;
 		self.proxiesByRefs[proxyRefID] = proxyObj;
 		return proxyObj;
@@ -181,32 +191,43 @@ dataHandler.prototype = {
 		else if(resultData.type===3){ // Normal Function
 			result = this.createCallCallback(resultData.callbackID,{});
 		}
-		else if(resultData.type===4){ // 'new' Function
+		else if(resultData.type===4){ // Proxy result ('new' Function or forceProxy)
 			var proxy = this.createProxyObject(resultData.proxyRefID,{ toJSON:function(){ return '{}'; }, inspect:function(){ return '{}'; } });
 			result = { methods:proxy.proxy, call:proxy.call }; 
 		}
 		else if(resultData.type===5){ // Promise - Not yet tested!
-			var proxy = this.createProxyObject(resultData.proxyRefID);
-			result = proxy.proxy;
+			throw Error('Not ready yet!');
+			//var proxy = this.createProxyObject(resultData.proxyRefID);
+			//result = proxy.proxy;
 		}
 		return result;
 	},
-	handleCallResponseOut: function(callID,result,success,crObj){
+	handleCallResponseOut: function(callID,result,success,crObj,options){
 		var resultData = {};
+		if(!options) options = {};
 		if(result===void 0) resultData.type = 0;
 		else if(result===null || typeof(result)==='boolean' || typeof(result)==='number' || typeof(result)==='string'){ // Basic Data Types
 			resultData.type = 1;
 			resultData.data = result;
 		}
+		else if(typeof(result)==='object' && result instanceof Error){ // Error
+			resultData.type = 1;
+			resultData.data = result.toString();
+		}
 		else if(typeof(result)==='object' && result instanceof Promise){ // Promise - Not yet tested!
-			resultData.type = 5;
-			resultData.proxyRefID = this.createProxyRef(result);
+			throw Error('Not ready yet!');
+			//resultData.type = 5;
+			//resultData.proxyRefID = this.createProxyRef(result);
 		}
 		else if(typeof(result)==='function'){ // Normal Function
 			resultData.type = 3;
 			var cbID = this.callbacksIndex++;
 			this.callbacks[cbID] = [callID,result];
 			resultData.callbackID = cbID;
+		}
+		else if(options.forceProxy){
+			resultData.type = 4;
+			resultData.proxyRefID = this.createProxyRef(result);
 		}
 		else if(typeof(result)==='object' && 'constructor' in result && result.constructor instanceof Function){ // 'new' Function
 			resultData.type = 4;
@@ -235,6 +256,7 @@ dataHandler.prototype = {
 			var newInstance = ('newInstance' in callOptions && callOptions.newInstance);
 			var useReturnOnly = ('useReturnOnly' in callOptions && callOptions.useReturnOnly);
 			var ignoreResult = ('ignoreResult' in callOptions && callOptions.ignoreResult);
+			var forceProxy = ('forceProxy' in callOptions && callOptions.forceProxy);
 			if(method===null && !newInstance) return self.handleCallResponseOut(call.id,call.args,true);
 			var exportsObj;
 			if(call.proxyRefID!==null && call.proxyRefID in self.proxyRefs){
@@ -243,7 +265,7 @@ dataHandler.prototype = {
 				if(self.workerModule && self.workerExports!==self.workerModule.exports) self.workerExports = self.workerModule.exports;
 				exportsObj = self.workerExports;
 			}
-			var methodExists = (method in exportsObj), methodIsFunction = (typeof(exportsObj[method])==='function');
+			var methodExists = (method in exportsObj), methodIsFunction = (typeof(exportsObj[method])==='function' && 'apply' in exportsObj[method]);
 			if(!method && newInstance){
 				result = new (Function.prototype.bind.apply(exportsObj,args));
 				self.handleCallResponseOut(call.id,result,true);
@@ -261,21 +283,22 @@ dataHandler.prototype = {
 						result = exportsObj[method].apply(exportsObj,args);
 					} else {
 						// todo: have 'finish' and 'reject' method names configurable using callOptions
+						// todo: catch and handle an error if the target function uses 'this', then throw Error and suggest dev to have useReturnOnly:true
 						result = exportsObj[method].apply({ finish:finish, reject:reject },args);
-						if(result===exportsObj) result = null; // could possibly return something that says it's the same as the proxy
+						//if(result===exportsObj) result = null; // could possibly return something that says it's the same as exportsObj?
 					}
-					//console.log('call '+method+' result',result,'callOptions',callOptions);
 					if(ignoreResult) result = null;
 					if(result===void 0 && 'allowUndefined' in callOptions && callOptions.allowUndefined!==false) finish(callOptions.allowUndefined);
 					else if(result!==void 0) finish(result);
 				}).then(function(result){
 					var keepCallbacks = ignoreResult;
 					if(!keepCallbacks) obj.done = true;
-					self.handleCallResponseOut(call.id,result,true,{ keepCallbacks:keepCallbacks });
+					self.handleCallResponseOut(call.id,result,true,{ keepCallbacks:keepCallbacks },{ forceProxy:forceProxy });
 				},function(result){
+					if(result instanceof Error) console.warn(result);
 					var keepCallbacks = ignoreResult;
 					if(!keepCallbacks) obj.done = true;
-					self.handleCallResponseOut(call.id,result,false,{ keepCallbacks:keepCallbacks });
+					self.handleCallResponseOut(call.id,result,false,{ keepCallbacks:keepCallbacks },{ forceProxy:forceProxy });
 				});
 			} else if(methodExists && !methodIsFunction){
 				// Get the property
