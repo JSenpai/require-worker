@@ -1,5 +1,8 @@
+/* global module,process,require,__filename,Function,Promise */
+"use strict";
 
-module.exports = {};
+var childProcess = require('child_process');
+module.exports.options = { 'verboseIO':false, 'debugProxy':false };
 
 module.exports.errorList = {
 	'1' : 'Called method does not exist',
@@ -12,166 +15,342 @@ module.exports.require = function(path,options){
 	return new workerChild(path,options);
 };
 
-var workerChild = function(path,options){
-	var forkOpts = {};
-	if(!options) options = {};
-	if('cwd' in options) forkOpts.cwd = options.cwd;
-	if('wrapRequire' in options && options['wrapRequire']){
-		this.child = require('child_process').fork(__filename,['-wrapRequire',path],forkOpts);
-	} else {
-		this.child = require('child_process').fork(path,[],forkOpts);
-	}
-	this.funcsIndex = 0;
-	this.funcs = {};
-	this.callbacksIndex = 0;
-	this.callbacks = {};
-	var callbackFinish = function(){ delete this.workerChild.callbacks[this.callbackID]; };
-	this.child.on('message',function(data){
-		//console.log('child -> parent :',data);
-		if('rwc' in data && 'id' in data.rwc){
-			if(data.rwc.id in this.funcs){
-				var c = this.funcs[data.rwc.id];
-				if('errCode' in data.rwc) c[1](data.rwc.errCode);
-				else if('result' in data.rwc && 'success' in data.rwc && data.rwc.success) c[0](data.rwc.result);
-				else if('result' in data.rwc && 'success' in data.rwc && !data.rwc.success) c[1](data.rwc.result);
-				else c[1](3);
-				delete this.funcs[data.rwc.id];
-				if(!('keepCallbacks' in data.rwc) || !data.rwc.keepCallbacks){
-					for(var cbID in this.callbacks){
-						if(this.callbacks[cbID][0]===data.rwc.id) delete this.callbacks[cbID];
-					}
-				}
-			}
-		}
-		if('rwcb' in data && 'id' in data.rwcb){
-			if(data.rwcb.id in this.callbacks){
-				var cb = this.callbacks[data.rwcb.id];
-				var args = data.rwcb.args;
-				cb[1].apply({ workerChild:this, callbackID:data.rwcb.id, finish:callbackFinish },args);
-			}
-		}
-	}.bind(this));
-	var self = this;
-	this.methods = new Proxy(Object.create(null),{
-		get: function(target, name){
-			return function(){
-				var args = Array.prototype.slice.call(arguments);
-				args.unshift(name);
-				return self.call.apply(self,args);
-			};
-		},
-		set: function(target, name, value){
-			self.call(name,value);
-			return true;
-		}
-	});
+module.exports.callOptions = function(options){
+	var obj = new dataHandler._funcObjTpl();
+	obj.callOptions = options;
+	return obj;
 };
 
-workerChild.prototype = {
-	call : function(method){
-		var self = this;
-		var args = Array.prototype.slice.call(arguments,1);
-		if(method===void 0) method = null;
-		var funcID = this.funcsIndex++;
-		var hasCallbacks = false;
-		for(var i=0,l=args.length; i<l; i++){
-			if(typeof(args[i])==='function'){ hasCallbacks = true; break; }
-		}
-		if(hasCallbacks){
-			var callbacks = {}, cbAssoc = {};
-			for(var i=0,l=args.length; i<l; i++){
-				if(typeof(args[i])!=='function') continue;
-				hasCallbacks = true;
-				var cbID = this.callbacksIndex++;
-				callbacks[cbID] = this.callbacks[cbID] = [funcID,args[i]];
-				args[i] = 0;
-				cbAssoc[i] = cbID;
-			}
-			var p = new Promise(function(finish,reject){
-				self.funcs[funcID] = [finish,reject];
-				self.child.send({ rwc:{ method:method, args:args, id:funcID, callbacks:cbAssoc } });
-			});
-			return p;
-		} else {
-			var p = new Promise(function(finish,reject){
-				self.funcs[funcID] = [finish,reject];
-				self.child.send({ rwc:{ method:method, args:args, id:funcID } });
-			});
-			return p;
-		}
-	},
-	kill : function(killCode){
-		this.child.kill(killCode);
+module.exports.noOp = function noOp(){};
+
+var workerChild = function(path,options){
+	var child, forkOptions = {};
+	if(!options) options = {};
+	if('cwd' in options) forkOptions.cwd = options.cwd;
+	if('wrapRequire' in options && options['wrapRequire']){
+		child = childProcess.fork(__filename,['-wrapRequire',path],forkOptions);
+	} else {
+		child = childProcess.fork(path,[],forkOptions);
 	}
+	this._child = child;
+	this._dataHandler = new dataHandler({ io:child, type:'host' });
+	this._proxyObject = this._dataHandler.createProxyObject(null);
+	this.methods = this._proxyObject.proxy;
+	this.call = this._proxyObject.call;
+	this.devObj = {}; // Safe object for developers to store stuff on
+	return Object.create(this); // Return an object with the workerChild as the prototype, so overwrites can be undone
+};
+workerChild.prototype = {
+	kill : function(killCode){
+		this._child.kill(killCode);
+	},
+	callOptionsObject: module.exports.callOptions
 };
 
 // module code
 var initModuleList = [];
 module.exports.initModule = function(module){
 	var moduleObj = (module && 'exports' in module) ? module : null;
-	var classObj = moduleObj ? module.exports : (module?module:{});
-	if(initModuleList.indexOf(classObj)!==-1) return classObj;
-	else initModuleList.push(classObj);
-	process.on('message',function(data){
-		//console.log('parent -> child :',data);
-		if('rwc' in data && 'method' in data.rwc && 'id' in data.rwc){
-			var method = data.rwc.method;
-			if(method===null) return process.send({ rwc:{ id:data.rwc.id, success:true, result:data.rwc.args } });
-			if(moduleObj && classObj!==moduleObj.exports) classObj = moduleObj.exports;
-			var methodExists = (method in classObj), methodIsFunction = (typeof(classObj[method])==='function');
-			if(methodExists && methodIsFunction){
-				// Call the function
-				var obj = { funcID:data.rwc.id, done:false };
-				new Promise(function(finish,reject){
-					var args = ('args' in data.rwc)?data.rwc.args:[];
-					moduleHandleInData(obj,args,data.rwc);
-					var r = classObj[method].apply({ finish:finish, reject:reject },args);
-					if(r!==void 0) finish(r);
-				}).then(function(result){
-					moduleHandleOutData(this,result,true);
-				}.bind(obj),function(result){
-					moduleHandleOutData(this,result,false);
-				}.bind(obj));
-			} else if(methodExists && !methodIsFunction){
-				// Get the property
-				if(!('args' in data.rwc) || data.rwc.args.length===0){
-					process.send({ rwc:{ id:data.rwc.id, success:true, result:classObj[method] } });
-				}
-				// Set the property
-				else if('args' in data.rwc && data.rwc.args.length===1 && 'callbacks' in data.rwc){
-					classObj[method] = function(){
-						process.send({ rwcb:{ id:data.rwc.callbacks['0'], args:Array.prototype.slice.call(arguments) } });
-						return true;
-					};
-					process.send({ rwc:{ id:data.rwc.id, success:true, keepCallbacks:true, result:null } });
-				} else if('args' in data.rwc && data.rwc.args.length===1) {
-					classObj[method] = data.rwc.args[0];
-					process.send({ rwc:{ id:data.rwc.id, success:true, result:classObj[method] } });
-				} else {
-					process.send({ rwc:{ id:data.rwc.id, errCode:2 } });
-				}
-			} else {
-				process.send({ rwc:{ id:data.rwc.id, errCode:1 } });
+	var exportsObj = moduleObj ? module.exports : (module?module:{});
+	if(initModuleList.indexOf(exportsObj)!==-1) return exportsObj;
+	else initModuleList.push(exportsObj);
+	this.dataHandler = new dataHandler({ io:process, type:'worker', module:moduleObj, exports:exportsObj });
+	return exportsObj;
+};
+
+// Data Handler
+var dataHandler = function(options){
+	var self = this;
+	this.io = options.io;
+	this.type = options.type;
+	if(this.type==='worker'){
+		this.workerModule = options.module;
+		this.workerExports = options.exports;
+	}
+	this.proxyIndex = 0;
+	this.proxies = {};
+	this.proxiesByRefs = {};
+	this.proxyRefIndex = 0;
+	this.proxyRefs = {};
+	this.funcsIndex = 0;
+	this.funcs = {};
+	this.callbacksIndex = 0;
+	this.callbacks = {};
+	if(this.type==='host'){
+		this.io.send({ options:module.exports.options });
+	}
+	this.io.on('message',function(data){
+		if(typeof(data)==='object' && 'options' in data){
+			module.exports.options = data.options;
+		}
+		if(module.exports.options.verboseIO) console.log((self.type==='host'?'worker':'host')+' -> '+self.type+' :',data);
+		self.handleIncoming(data);
+	});
+	this._funcObjTpl = function(){};
+};
+dataHandler._funcObjTpl = function(){};
+dataHandler.prototype = {
+	createProxyRef: function(exportsObj){
+		var self = this;
+		for(var i in self.proxyRefs){
+			if(self.proxyRefs[i].exports===exportsObj){
+				self.proxyRefs[i].useCount++;
+				return i;
 			}
 		}
-	});
-	return classObj;
-};
-
-var moduleHandleInData = function(mngObj,args,callData){
-	if('callbacks' in callData) for(var i in callData.callbacks){
-		args[parseInt(i)] = moduleHandleInData.argumentCallback.bind({ cbID:callData.callbacks[i], obj:mngObj });
+		var refID = self.proxyRefIndex++;
+		self.proxyRefs[refID] = { exports:exportsObj, useCount:1 };
+		return refID;
+	},
+	createProxyObject: function(proxyRefID,targetObject){
+		var self = this;
+		if(proxyRefID in self.proxiesByRefs){
+			self.proxiesByRefs[proxyRefID].useCount++;
+			return self.proxiesByRefs[proxyRefID];
+		}
+		var proxyID = self.proxyIndex++;
+		if(!targetObject) targetObject = Object.create(null);
+		var call = function rwProxyCall(method){
+			var args = Array.prototype.slice.call(arguments,1);
+			if(this && 'constructor' in this && (this.constructor===call || this.constructor instanceof call)){
+				if(args.length>0 && typeof(args[args.length-1])==='object' && args[args.length-1] instanceof dataHandler._funcObjTpl){
+					args[args.length-1].callOptions.newInstance = true;
+				} else {
+					var obj = new dataHandler._funcObjTpl();
+					obj.callOptions = { newInstance:true };
+					args.push(obj);
+				}
+			}
+			return self.createDirectCall(proxyID,method,args);
+		};
+		var proxy = new Proxy(targetObject,{
+			get: function(target, name){
+				if(module.exports.options.debugProxy) console.log('[rw-debug] proxy '+proxyID+':'+proxyRefID+' get '+name+' on',target);
+				if(name==='constructor') return void 0;
+				if(name in target) return target[name];
+				return call.bind(null,name);
+			},
+			set: function(target, name, value){
+				return call(name,value);
+			}
+		});
+		var proxyObj = { id:proxyID, proxy:proxy, refID:proxyRefID, call:call, useCount:1 };
+		self.proxies[proxyID] = proxyObj;
+		self.proxiesByRefs[proxyRefID] = proxyObj;
+		return proxyObj;
+	},
+	createDirectCall: function(proxyID,method,args){
+		var self = this;
+		var proxyObject = self.proxies[proxyID];
+		if(self.type!=='host') throw Error("createDirectCall can only be done on host");
+		if(method===void 0) method = null;
+		var callID = self.funcsIndex++;
+		var hasCallbacks = false, callOptions;
+		for(var i=0,l=args.length; i<l; i++){
+			if(typeof(args[i])==='function'){ hasCallbacks = true; continue; }
+			if(i===l-1 && typeof(args[i])==='object' && args[i] instanceof dataHandler._funcObjTpl){
+				if('callOptions' in args[i]) callOptions = args[i].callOptions;
+				args.splice(i,1);
+			}
+		}
+		if(hasCallbacks){
+			var callbacks = {}, cbAssoc = {};
+			for(var i=0,l=args.length; i<l; i++){
+				if(typeof(args[i])!=='function') continue;
+				hasCallbacks = true;
+				var cbID = self.callbacksIndex++;
+				callbacks[cbID] = self.callbacks[cbID] = [callID,args[i]];
+				args[i] = 0;
+				cbAssoc[i] = cbID;
+			}
+			var callObj = { id:callID, method:method, args:args, proxyRefID:proxyObject.refID, callbacks:cbAssoc };
+		} else {
+			var callObj = { id:callID, method:method, args:args, proxyRefID:proxyObject.refID };
+		}
+		if(typeof(callOptions)==='object') callObj.co = callOptions;
+		var p = new Promise(function(finish,reject){
+			self.funcs[callID] = [finish,reject];
+			self.io.send({ call:callObj });
+		});
+		return p;
+	},
+	createCallCallback: function(callbackID,obj){
+		var self = this;
+		return function(){
+			if(!obj.done) self.io.send({ callbackReply:{ id:callbackID, args:Array.prototype.slice.call(arguments) } });
+		};
+	},
+	handleCallResponseIn: function(resultData){
+		var self = this;
+		var result = void 0;
+		if(resultData.type===1) result = resultData.data; // Basic Data Types
+		else if(resultData.type===2){ // Object
+			result = resultData.data;
+			// todo: fill in callback, promise and other resultData
+		}
+		else if(resultData.type===3){ // Normal Function
+			result = this.createCallCallback(resultData.callbackID,{});
+		}
+		else if(resultData.type===4){ // Proxy result ('new' Function or forceProxy)
+			var proxy = this.createProxyObject(resultData.proxyRefID,{ toJSON:function(){ return '{}'; }, inspect:function(){ return '{}'; } });
+			result = { methods:proxy.proxy, call:proxy.call }; 
+		}
+		else if(resultData.type===5){ // Promise - Not yet tested!
+			throw Error('Not ready yet!');
+			//var proxy = this.createProxyObject(resultData.proxyRefID);
+			//result = proxy.proxy;
+		}
+		return result;
+	},
+	handleCallResponseOut: function(callID,result,success,crObj,options){
+		var resultData = {};
+		if(!options) options = {};
+		if(result===void 0) resultData.type = 0;
+		else if(result===null || typeof(result)==='boolean' || typeof(result)==='number' || typeof(result)==='string'){ // Basic Data Types
+			resultData.type = 1;
+			resultData.data = result;
+		}
+		else if(typeof(result)==='object' && result instanceof Error){ // Error
+			resultData.type = 1;
+			resultData.data = result.toString();
+		}
+		else if(typeof(result)==='object' && result instanceof Promise){ // Promise - Not yet tested!
+			throw Error('Not ready yet!');
+			//resultData.type = 5;
+			//resultData.proxyRefID = this.createProxyRef(result);
+		}
+		else if(typeof(result)==='function'){ // Normal Function
+			resultData.type = 3;
+			var cbID = this.callbacksIndex++;
+			this.callbacks[cbID] = [callID,result];
+			resultData.callbackID = cbID;
+		}
+		else if(options.forceProxy){
+			resultData.type = 4;
+			resultData.proxyRefID = this.createProxyRef(result);
+		}
+		else if(typeof(result)==='object' && 'constructor' in result && result.constructor instanceof Function){ // 'new' Function
+			resultData.type = 4;
+			resultData.proxyRefID = this.createProxyRef(result);
+		}
+		else if(typeof(result)==='object'){ // Normal Object
+			resultData.type = 2;
+			// todo: replace callback, promise and other data with filler data, and specify id's in other resultData fields
+			resultData.data = result;
+		} else { // Fallback to 'Basic Data'
+			resultData.type = 1;
+			resultData.data = result;
+		}
+		crObj = (typeof(crObj)==='object')?crObj:{};
+		crObj.id = callID;
+		crObj.success = success;
+		crObj.data = resultData;
+		this.io.send({ callReply:crObj });
+	},
+	handleIncoming: function(data){
+		var self = this;
+		var call = (self.type==='worker' && 'call' in data) ? data.call : false;
+		if(call && 'method' in call && 'id' in call){
+			var method = call.method;
+			var callOptions = ('co' in call) ? call.co : {};
+			var newInstance = ('newInstance' in callOptions && callOptions.newInstance);
+			var useReturnOnly = ('useReturnOnly' in callOptions && callOptions.useReturnOnly);
+			var ignoreResult = ('ignoreResult' in callOptions && callOptions.ignoreResult);
+			var forceProxy = ('forceProxy' in callOptions && callOptions.forceProxy);
+			if(method===null && !newInstance) return self.handleCallResponseOut(call.id,call.args,true);
+			var exportsObj;
+			if(call.proxyRefID!==null && call.proxyRefID in self.proxyRefs){
+				exportsObj = self.proxyRefs[call.proxyRefID].exports;
+			} else {
+				if(self.workerModule && self.workerExports!==self.workerModule.exports) self.workerExports = self.workerModule.exports;
+				exportsObj = self.workerExports;
+			}
+			var methodExists = (method in exportsObj), methodIsFunction = (typeof(exportsObj[method])==='function' && 'apply' in exportsObj[method]);
+			if(!method && newInstance){
+				result = new (Function.prototype.bind.apply(exportsObj,args));
+				self.handleCallResponseOut(call.id,result,true);
+			} else if(methodExists && methodIsFunction){
+				// Call the function
+				var obj = { done:false };
+				new Promise(function(finish,reject){
+					var result, args = ('args' in call)?call.args:[];
+					if('callbacks' in call) for(var i in call.callbacks){
+						args[parseInt(i)] = self.createCallCallback(call.callbacks[i],obj); 
+					}
+					if(newInstance){
+						result = new exportsObj[method].apply(exportsObj,args);
+					} else if(useReturnOnly || ignoreResult){
+						result = exportsObj[method].apply(exportsObj,args);
+					} else {
+						// todo: have 'finish' and 'reject' method names configurable using callOptions
+						// todo: catch and handle an error if the target function uses 'this', then throw Error and suggest dev to have useReturnOnly:true
+						result = exportsObj[method].apply({ finish:finish, reject:reject },args);
+						//if(result===exportsObj) result = null; // could possibly return something that says it's the same as exportsObj?
+					}
+					if(ignoreResult) result = null;
+					if(result===void 0 && 'allowUndefined' in callOptions && callOptions.allowUndefined!==false) finish(callOptions.allowUndefined);
+					else if(result!==void 0) finish(result);
+				}).then(function(result){
+					var keepCallbacks = ignoreResult;
+					if(!keepCallbacks) obj.done = true;
+					self.handleCallResponseOut(call.id,result,true,{ keepCallbacks:keepCallbacks },{ forceProxy:forceProxy });
+				},function(result){
+					if(result instanceof Error) console.warn(result);
+					var keepCallbacks = ignoreResult;
+					if(!keepCallbacks) obj.done = true;
+					self.handleCallResponseOut(call.id,result,false,{ keepCallbacks:keepCallbacks },{ forceProxy:forceProxy });
+				});
+			} else if(methodExists && !methodIsFunction){
+				// Get the property
+				if(!('args' in call) || call.args.length===0){
+					self.handleCallResponseOut(call.id,exportsObj[method],true);
+				}
+				// Set the property
+				else if('args' in call && call.args.length===1 && 'callbacks' in call){
+					exportsObj[method] = function(){
+						self.io.send({ callbackReply:{ id:call.callbacks['0'], args:Array.prototype.slice.call(arguments) } });
+						return true;
+					};
+					self.handleCallResponseOut(call.id,null,true,{ keepCallbacks:true });
+				} else if('args' in call && call.args.length===1) {
+					exportsObj[method] = call.args[0];
+					self.handleCallResponseOut(call.id,exportsObj[method],true);
+				} else {
+					self.io.send({ callReply:{ id:call.id, errCode:2 } });
+				}
+			} else {
+				self.io.send({ callReply:{ id:call.id, errCode:1, method:method } });
+			}
+		}
+		var callReply = (self.type==='host' && 'callReply' in data) ? data.callReply : false;
+		if(callReply && 'id' in callReply){
+			if(callReply.id in self.funcs){
+				var result = ('data' in callReply) ? self.handleCallResponseIn(callReply.data) : void 0;
+				var success = ('success' in callReply) ? callReply.success : void 0;
+				var c = self.funcs[callReply.id];
+				if('errCode' in callReply) c[1](callReply.errCode);
+				else if(success) c[0](result);
+				else if(success===void 0) c[1](3);
+				else c[1](result);
+				delete self.funcs[callReply.id];
+				if(!('keepCallbacks' in callReply) || !callReply.keepCallbacks){
+					for(var cbID in self.callbacks){
+						if(self.callbacks[cbID][0]===callReply.id) delete self.callbacks[cbID];
+					}
+				}
+			}
+		}
+		var callbackReply = ('callbackReply' in data) ? data.callbackReply : false;
+		if(callbackReply && 'id' in callbackReply){
+			if(callbackReply.id in self.callbacks){
+				var cb = self.callbacks[callbackReply.id];
+				var args = callbackReply.args;
+				cb[1].apply({ workerChild:self, callbackID:callbackReply.id, finish:dataHandler._callbackFinish },args);
+			}
+		}
 	}
 };
-moduleHandleInData.argumentCallback = function(){
-	if(!this.obj.done) process.send({ rwcb:{ id:this.cbID, args:Array.prototype.slice.call(arguments) } });
-};
-
-var moduleHandleOutData = function(mngObj,result,success){
-	if(result===void 0) result = null;
-	mngObj.done = true;
-	process.send({ rwc:{ id:mngObj.funcID, success:success, result:result } });
-};
+dataHandler._callbackFinish = function(){ delete this.workerChild.callbacks[this.callbackID]; };
 
 if(require.main===module && process.argv.length===4 && process.argv[2]==='-wrapRequire'){
 	var moduleToRequire = require.resolve(process.argv[3]);

@@ -1,7 +1,7 @@
 {
   "name": "require-worker",
   "version": "0.0.9",
-  "description": "Require differently. Load a module in a new process.",
+  "description": "Require differently in node.js, with a new process.",
   "main": "index.js",
   "directories": {
     "example": "examples"

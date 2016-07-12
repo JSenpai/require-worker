@@ -24,6 +24,12 @@ module.exports.hai = function(name){
 	// If the function returns something (that is not undefined), it will use that as the result instead and all future promise finishes/rejects are ignored
 };
 
+// returnTest method (return undefined)
+module.exports.returnTest = function(logText){
+	console.log(logText);
+	return; // Optional
+};
+
 // rejectMe method (always reject)
 module.exports.rejectMe = function(){
 	// Always reject
@@ -58,4 +64,10 @@ module.exports.yo = function(name,cb1){
 	},function(err){
 		self.rehect('Sub-Worker Error: '+err);
 	});
+};
+
+module.exports.giveMeAFunction = function(someText){
+	return function(prefixText){
+		console.log('giveMeAFunction: returned function was called.',prefixText+' '+someText+'.');
+	};
 };
