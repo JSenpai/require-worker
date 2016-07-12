@@ -14,6 +14,14 @@ This is very new, experimental and features are still getting implemented.
 
 There are many cases where this will not work with existing modules which accept data types, or return data types that are not yet implemented. Though this is being worked on. See the API below.
 
+## Why use this?
+
+Let's say you want to require a module, but the tasks it performs are synchronous and long, or simply does a lot of number crunching. That module would effect the performance and responsiveness of your application.
+
+When using _require-worker_, that module would instead run in a different process, allowing your application to respond to incoming connections and do it's own number crunching at the same time, while still talking with that module in a similar way it used to.
+
+I decided to create this module because simply creating a forked process, or reworking your application to work with Nodejs clusters, can be cumbersome if your application is already quite complicated. Require'ing a module is easy. Most Nodejs applications require them to expand their functionality. Even modules themselves require other modules. So this module simply makes use of that system, to include the power of using multiple processors too.
+
 ## Installation
 
 Install the module via [NPM](https://www.npmjs.com/package/require-worker)
