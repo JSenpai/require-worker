@@ -127,15 +127,15 @@ See the examples for more information.
 
 Default Input Arguments: `string`, `number`, `array`, `object`, `null`, `boolean` (the basic stuff that can be stringified with JSON in the Nodejs [process IPC channel](https://nodejs.org/api/child_process.html))
 
-Impemented Additional Input Arguments: `function` (as a callback only)
+Implemented Additional Input Arguments: `function` (as a callback only)
 
 Unavailable Input Arguments: `promise`, `undefined`, & others
 
 Default Output Results: `string`, `number`, `array`, `object`, `null`, `boolean` (the basic stuff that can be stringified with JSON in the Nodejs [process IPC channel](https://nodejs.org/api/child_process.html))
 
-Impemented Additional Output Results: _constructed object_ (which is a JavaScript `Proxy`), `function` (simple callback which can have arguments. _Not a promise_. No return result)
+Implemented Additional Output Results: _constructed object_ (which is a JavaScript `Proxy`), `function` (simple callback which can have arguments. _Not a promise_. No return result), `promise`.
 
-Unavailable Output Results: `promise`, `undefined` (unless `allowUndefined` is passed as a call option), & others.
+Unavailable Output Results: `undefined` (unless `allowUndefined` is passed as a call option) & others.
 
 Support for additional inputs and outputs coming soon.
 

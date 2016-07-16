@@ -76,6 +76,8 @@ var dataHandler = function(options){
 	this.funcs = {};
 	this.callbacksIndex = 0;
 	this.callbacks = {};
+	this.promiseIndex = 0;
+	this.promises = {};
 	if(this.type==='host'){
 		this.io.send({ options:module.exports.options });
 	}
@@ -168,8 +170,8 @@ dataHandler.prototype = {
 			var callObj = { id:callID, method:method, args:args, proxyRefID:proxyObject.refID };
 		}
 		if(typeof(callOptions)==='object') callObj.co = callOptions;
-		var p = new Promise(function(finish,reject){
-			self.funcs[callID] = [finish,reject];
+		var p = new Promise(function(resolve,reject){
+			self.funcs[callID] = [resolve,reject];
 			self.io.send({ call:callObj });
 		});
 		return p;
@@ -195,15 +197,15 @@ dataHandler.prototype = {
 			var proxy = this.createProxyObject(resultData.proxyRefID,{ toJSON:function(){ return '{}'; }, inspect:function(){ return '{}'; } });
 			result = { methods:proxy.proxy, call:proxy.call }; 
 		}
-		else if(resultData.type===5){ // Promise - Not yet tested!
-			throw Error('Not ready yet!');
-			//var proxy = this.createProxyObject(resultData.proxyRefID);
-			//result = proxy.proxy;
+		else if(resultData.type===5){ // Promise
+			result = new Promise(function(resolve,reject){
+				self.promises[resultData.promiseID] = [resolve,reject];
+			});
 		}
 		return result;
 	},
 	handleCallResponseOut: function(callID,result,success,crObj,options){
-		var resultData = {};
+		var resultData = {}, self = this;
 		if(!options) options = {};
 		if(result===void 0) resultData.type = 0;
 		else if(result===null || typeof(result)==='boolean' || typeof(result)==='number' || typeof(result)==='string'){ // Basic Data Types
@@ -214,10 +216,17 @@ dataHandler.prototype = {
 			resultData.type = 1;
 			resultData.data = result.toString();
 		}
-		else if(typeof(result)==='object' && result instanceof Promise){ // Promise - Not yet tested!
-			throw Error('Not ready yet!');
-			//resultData.type = 5;
-			//resultData.proxyRefID = this.createProxyRef(result);
+		else if(typeof(result)==='object' && result instanceof Promise){ // Promise
+			resultData.type = 5;
+			var pID = this.promiseIndex++;
+			resultData.promiseID = pID;
+			setImmediate(function(){
+				result.then(function(resolveResult){
+					self.io.send({ promiseResult:{ id:pID, success:true, result:resolveResult } });
+				},function(rejectResult){
+					self.io.send({ promiseResult:{ id:pID, success:false, result:rejectResult } });
+				});
+			});
 		}
 		else if(typeof(result)==='function'){ // Normal Function
 			resultData.type = 3;
@@ -288,8 +297,12 @@ dataHandler.prototype = {
 						//if(result===exportsObj) result = null; // could possibly return something that says it's the same as exportsObj?
 					}
 					if(ignoreResult) result = null;
-					if(result===void 0 && 'allowUndefined' in callOptions && callOptions.allowUndefined!==false) finish(callOptions.allowUndefined);
-					else if(result!==void 0) finish(result);
+					if(typeof(result)==='object' && result instanceof Promise){
+						result.then(resolve,reject);
+					} else {
+						if(result===void 0 && 'allowUndefined' in callOptions && callOptions.allowUndefined!==false) resolve(callOptions.allowUndefined);
+						else if(result!==void 0) resolve(result);
+					}
 				}).then(function(result){
 					var keepCallbacks = ignoreResult;
 					if(!keepCallbacks) obj.done = true;
@@ -345,7 +358,16 @@ dataHandler.prototype = {
 			if(callbackReply.id in self.callbacks){
 				var cb = self.callbacks[callbackReply.id];
 				var args = callbackReply.args;
-				cb[1].apply({ workerChild:self, callbackID:callbackReply.id, finish:dataHandler._callbackFinish },args);
+				cb[1].apply({ workerChild:self, callbackID:callbackReply.id, resolve:dataHandler._callbackFinish },args);
+			}
+		}
+		var promiseResult = ('promiseResult' in data) ? data.promiseResult : false;
+		if(promiseResult && 'id' in promiseResult){
+			if(promiseResult.id in self.promises){
+				var p = self.promises[promiseResult.id];
+				delete self.promises[promiseResult.id];
+				if(promiseResult.success) p[0](promiseResult.result);
+				else p[1](promiseResult.result);
 			}
 		}
 	}
