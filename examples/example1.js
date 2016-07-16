@@ -10,7 +10,7 @@ var someModule = requireWorker.require(require.resolve('./module_a.js'));
 // Call the 'hello' method on the module (module.exports.hello)
 // The call method returns a Promise for success & failure
 someModule.call('hello','Foo').then(function(result){
-	// The promise will resolve when the module method returns a value other than undefined, or when they called this.finish()
+	// The promise will resolve when the module method returns a value other than undefined, or when they called this.resolve()
 	console.log('hello: Result:',result);
 },function(err){
 	// On Error, if the error is generated internally, it will return a string number that will exist in .errorList. Otherwise the error message (or the reject message) will show.
@@ -25,7 +25,7 @@ someModule.call('hai','Bar').then(function(result){
 
 // Call the 'returnTest' method on the module (module.exports.returnTest)
 // Set the last call argument as a callOptions object so we can set some options.
-// The 'allowUndefined' option allows an 'undefined' function return to finish the promise.
+// The 'allowUndefined' option allows an 'undefined' function return to resolve the promise.
 // The result is set to the value of the allowUndefined option.
 someModule.call('returnTest','returnTest: Hello World',someModule.callOptionsObject({ allowUndefined:null })).then(function(result){
 	console.log('returnTest:',(result===null?'Success':result));
@@ -55,7 +55,7 @@ var intervalCount = 0;
 someModule.methods.intervalTest('Foo',function(arg1,arg2){
 	console.log('intervalTest:',arg1,arg2);
 	intervalCount++;
-	//if(intervalCount>=2) this.finish(); // If .finish is called on this side, it will internally ignore future callback calls
+	//if(intervalCount>=2) this.resolve(); // If .resolve is called on this side, it will internally ignore future callback calls
 },function(){
 	console.log('intervalTest:','second callback');
 }).then(function(){

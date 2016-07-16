@@ -43,7 +43,7 @@ var myModule = requireWorker.require(require.resolve('./myModule.js'));
 
 // Call the 'hello' method with an argument. Then handle the promise.
 myModule.call('hello','Foo').then(function(result){
-	// The promise will resolve when the module method returns a value other than undefined, or when it calls this.finish()
+	// The promise will resolve when the module method returns a value other than undefined, or when it calls this.resolve()
 	console.log('hello: result:',result);
 }).catch(function(err){
 	// On Error, if the error is generated internally, it will return a string number that will exist in .errorList. Otherwise the error message (or the reject message) will show.
@@ -57,7 +57,7 @@ myModule.call('hello','Foo').then(function(result){
 myModule.methods.yo('Bar',function(msg){
 	console.log('yo: callback result:',msg);
 }).then(function(result){
-	console.log('yo: finish result:',result);
+	console.log('yo: resolve result:',result);
 }).catch(function(err){
 	console.log('yo: error:',err);
 });
@@ -70,14 +70,14 @@ require('require-worker').initModule(module);
 
 // Hello method (always return)
 module.exports.hello = function(name){
-	// Simply return the result (finishes promise internally)
+	// Simply return the result (resolves promise internally)
 	return 'Hello '+(name||'World')+'!';
 };
 
 // Yo method
 module.exports.yo = function(name,callback){
 	callback('Do you like pizza? I do.');
-	this.finish('Yo '+(name||'World')+'!');
+	this.resolve('Yo '+(name||'World')+'!');
 };
 ```
 
@@ -105,11 +105,11 @@ callOptions (callOptions object): the last argument can be a callOptions object 
 
 * `newInstance`: true/false, call the method with a 'new' keyword (new worker.call(...) also works). Use `null` as the property value to call a new instance of the module.exports object itself (such as the Nodejs [EventEmitter](https://nodejs.org/api/events.html) module).
 
-* `useReturnOnly`: true/false, call the method with the module as the binding object, causing the promise to only finish with the result of the method's returned value.
+* `useReturnOnly`: true/false, call the method with the module as the binding object, causing the promise to only resolve with the result of the method's returned value.
 
 * `ignoreResult`: true/false, call the method with the module as the binding object. Finish the promise with `null` as the result.
 
-* `allowUndefined`: any/false, allow `undefined` as the module's return value, to finish the promise. The result is the value that `allowUndefined` is set to (except `false`).
+* `allowUndefined`: any/false, allow `undefined` as the module's return value, to resolve the promise. The result is the value that `allowUndefined` is set to (except `false`).
 
 * `forceProxy`: true/false, force the result to be a proxy
 
@@ -119,21 +119,23 @@ callOptions (callOptions object): the last argument can be a callOptions object 
 
 **`requireWorker.initModule(module)`** Initialise the requireWorker in the module. Returns `module.exports || module` (not needed if wrapRequire:true is used)
 
-See the examples for more understanding.
+For methods in modules, the call promise can be fulfilled if the function returns with something other than `undefined` (see above for `allowUndefined` callOption). It can also be fulfilled with `this.resolve()` or `this.reject()` which can be done instantly or asynchronously. If the options `newInstance`, `useReturnOnly` or `ignoreResult` are used, a function return will resolve the promise, but the resolve and reject methods will not be available on `this`.
+
+See the examples for more information.
 
 ### Inputs / Outputs
 
 Default Input Arguments: `string`, `number`, `array`, `object`, `null`, `boolean` (the basic stuff that can be stringified with JSON in the Nodejs [process IPC channel](https://nodejs.org/api/child_process.html))
 
-Impemented Additional Input Arguments: `function` (as a callback only)
+Implemented Additional Input Arguments: `function` (as a callback only)
 
 Unavailable Input Arguments: `promise`, `undefined`, & others
 
 Default Output Results: `string`, `number`, `array`, `object`, `null`, `boolean` (the basic stuff that can be stringified with JSON in the Nodejs [process IPC channel](https://nodejs.org/api/child_process.html))
 
-Impemented Additional Output Results: _constructed object_ (which is a JavaScript `Proxy`), `function` (simple callback which can have arguments. _Not a promise_. No return result)
+Implemented Additional Output Results: _constructed object_ (which is a JavaScript `Proxy`), `function` (simple callback which can have arguments. _Not a promise_. No return result), `promise`.
 
-Unavailable Output Results: `promise`, `undefined` (unless `allowUndefined` is passed as a call option), & others.
+Unavailable Output Results: `undefined` (unless `allowUndefined` is passed as a call option) & others.
 
 Support for additional inputs and outputs coming soon.
 

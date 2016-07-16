@@ -13,15 +13,15 @@ module.exports.onTest = null;
 // Declare some methods
 // hello method (always return)
 module.exports.hello = function(name){
-	// Simply return the result (finishes promise internally)
+	// Simply return the result (resolves promise internally)
 	return 'Hello '+(name||'World')+'!';
 };
 
-// hai method (always finish)
+// hai method (always resolve)
 module.exports.hai = function(name){
 	// Finish the promise (async method) with the result
-	this.finish('Hello '+(name||'World')+'!');
-	// If the function returns something (that is not undefined), it will use that as the result instead and all future promise finishes/rejects are ignored
+	this.resolve('Hello '+(name||'World')+'!');
+	// If the function returns something (that is not undefined), it will use that as the result instead and all future promise resolves/rejects are ignored
 };
 
 // returnTest method (return undefined)
@@ -45,9 +45,9 @@ module.exports.intervalTest = function(text,callback1,callback2){
 		callback1(text,new Date().toLocaleString());
 		count++;
 		if(count>=3){
-			// Stop the timer and finish the promise
+			// Stop the timer and resolve the promise
 			callback2();
-			self.finish();
+			self.resolve();
 			clearInterval(tmr);
 		}
 	},1000);
@@ -60,7 +60,7 @@ var someOtherModule = require('../index.js').require('./module_b.js',{ cwd:__dir
 module.exports.yo = function(name,cb1){
 	var self = this;
 	someOtherModule.methods.yo(name,cb1).then(function(result){
-		self.finish('Sub-Worker Result: '+result);
+		self.resolve('Sub-Worker Result: '+result);
 	},function(err){
 		self.rehect('Sub-Worker Error: '+err);
 	});
