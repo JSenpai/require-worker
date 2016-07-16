@@ -272,7 +272,7 @@ dataHandler.prototype = {
 			} else if(methodExists && methodIsFunction){
 				// Call the function
 				var obj = { done:false };
-				new Promise(function(finish,reject){
+				new Promise(function(resolve,reject){
 					var result, args = ('args' in call)?call.args:[];
 					if('callbacks' in call) for(var i in call.callbacks){
 						args[parseInt(i)] = self.createCallCallback(call.callbacks[i],obj); 
@@ -282,9 +282,9 @@ dataHandler.prototype = {
 					} else if(useReturnOnly || ignoreResult){
 						result = exportsObj[method].apply(exportsObj,args);
 					} else {
-						// todo: have 'finish' and 'reject' method names configurable using callOptions
+						// todo: have 'resolve' and 'reject' method names configurable using callOptions
 						// todo: catch and handle an error if the target function uses 'this', then throw Error and suggest dev to have useReturnOnly:true
-						result = exportsObj[method].apply({ finish:finish, reject:reject },args);
+						result = exportsObj[method].apply({ resolve:resolve, reject:reject, finish:resolve },args);
 						//if(result===exportsObj) result = null; // could possibly return something that says it's the same as exportsObj?
 					}
 					if(ignoreResult) result = null;

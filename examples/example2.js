@@ -46,7 +46,7 @@ newEventEmitterPromise.then(function(result){
 		//eventsWorker.kill();
 	},rw.callOptions({ ignoreResult:true }));
 }).then(function(){
-	// Pass ignoreResult so undefined returns can finish the promise, and so callbacks continue to work.
+	// Pass ignoreResult so undefined returns can resolve the promise, and so callbacks continue to work.
 	return eTemp.events.emit('test','foo','bar',rw.callOptions({ ignoreResult:true }));
 }).then(function(){
 	console.log('events.emit complete');
