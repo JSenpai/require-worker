@@ -1,6 +1,6 @@
 {
   "name": "require-worker",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Require differently in node.js, with a new process.",
   "main": "index.js",
   "directories": {
