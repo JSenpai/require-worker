@@ -24,6 +24,8 @@ I decided to create this module because simply creating a forked process, or rew
 
 ## Installation
 
+Warning: This project will rewritten to use ES6 and ES7 features soon (such as async await) which will be the first major release (1.0.0).
+
 Install the module via [NPM](https://www.npmjs.com/package/require-worker)
 ```
 npm install require-worker --save
@@ -153,7 +155,7 @@ All the help is appreciated.
 
 MIT License
 
-Copyright (c) 2016 Jason Sheppard @ https://github.com/Unchosen
+Copyright (c) 2017 Jason Sheppard @ https://github.com/Unchosen
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
