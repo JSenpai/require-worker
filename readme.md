@@ -6,6 +6,9 @@
 
 Load a module in a new process. Ideally similar to Nodejs's require().
 
+### require-worker v0.1.1 - concept release
+> This release (v0.1.1) is highly experimental as it's a proof of concept. The next release will be completely re-written, and have a different API.
+
 ## What is this?
 
 This module is meant to require other Nodejs modules, but in a new process instead of the same process.
