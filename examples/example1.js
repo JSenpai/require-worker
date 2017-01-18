@@ -4,6 +4,7 @@
 var requireWorker = require('../');
 
 var test = requireWorker.require('./example1_module.js');
+var test2 = requireWorker.require('./example1_module.js');
 //var rwTest = test.constructor;
 
 /*
@@ -26,7 +27,7 @@ test.hello('World').then(({value})=>{
 	console.error("test.hello('World') error:",err);
 });
 
-test.foo().then(({value})=>{
+test2.foo().then(({value})=>{
 	console.log("test.foo() result:",value);
 }).catch((err)=>{
 	console.error("test.foo() error:",err);

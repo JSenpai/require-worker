@@ -10,11 +10,10 @@ const proxyCom = require(path.resolve(__dirname,'./lib/proxy-communication'));
 const ipcTransport = require(path.resolve(__dirname,'./lib/ipc-transport'));
 
 module.exports = (target)=>{
-	if(hostObject!==null){
-		if(target) throw Error("first argument should be undefined, as this is currently in host mode");
-		return hostObject;
-	}
-	if(!clientsMap.has(target)) throw Error("first argument must be a valid require-worker client or path");
+	if(_.isString(target))try{ target = path.resolve(target); }catch(err){}
+	if(hostsMap.has(target)) return hostsMap.get(target);
+	if(clientsMap.size===0 && hostsMap.size>0) throw Error("first argument must be a valid require-worker host or file path");
+	if(!clientsMap.has(target)) throw Error("first argument must be a valid require-worker client or file path");
 	return clientsMap.get(target);
 };
 
@@ -40,7 +39,7 @@ var getStackFiles = function getStackFiles(){
 };
 
 var clientsMap = new Map(), clientIndex = 0;
-var client = function requireWorkerClient(file,options={ forkOptions:{ unref:false } }){
+var client = function requireWorkerClient(file,options={ ownProcess:false, shareProcess:null }){
 	if(!_.isString(file)) throw Error("first argument must be a string (require path)");
 	if(!_.isObject(options)) throw Error("second argument must be an object (options) or undefined");
 	var self = this;
@@ -67,6 +66,7 @@ var client = function requireWorkerClient(file,options={ forkOptions:{ unref:fal
 				}catch(err2){ // fallback to setting cwd of fork
 					hostOptions.file = file;
 					options.forkOptions.cwd = prevStackDir;
+					options.ownProcess = true;
 				}
 			}
 		}catch(err3){
@@ -74,17 +74,21 @@ var client = function requireWorkerClient(file,options={ forkOptions:{ unref:fal
 		}
 	}
 	self.hostOptions = hostOptions;
-	self.child = childProcess.fork(__filename,['--requireHost',JSON.stringify(hostOptions)],options.forkOptions);
-	self.setChildReferenced(!options.unref);
+	var rwPObj = rwProcess({ client:self });
 	self.ipcTransport.setChild(self.child);
-	clientsMap.set(self.file,self);
+	var rwPTransport = rwPObj.ipcTransport.createMessageEventEmitter();
+	rwPTransport.once('processReady!',()=>{
+		rwPTransport.send('requireHost',hostOptions);
+	});
+	rwPTransport.send('processReady?');
+	try{ clientsMap.set(path.resolve(self.file),self); }catch(err){}
 	self.proxyCom = proxyCom.create({
 		transport: { type:'ipcTransport', instance:self.ipcTransport },
 		requireWorkerClient: self
 	});
 	self.proxyCom.transport.once('requireState',({message,stack}={})=>{
 		if(stack){
-			self.child.kill();
+			if(rwPObj.ownProcess) self.child.kill();
 			var e = new Error(message);
 			e.stack = stack;
 			self.events.emit('error',e); //throw e;
@@ -116,17 +120,57 @@ client.prototype = {
 	}
 };
 
-var checkRequireHost = ()=>{
-	if(require.main===module && process.argv.length===4 && process.argv[2]==='--requireHost'){
-		var hostOptions = JSON.parse(process.argv[3]);
-		if(!_.isObject(hostOptions)) throw Error("JSON.parse of hostOptions failed");
-		module.exports = new host(hostOptions);
+var rwProcessMap = new Map(), rwProcessIndex = 0;
+var rwProcess = function(options={}){
+	var client = options.client;
+	var ownProcess = !!client.options.ownProcess;
+	if(!client) return Promise.reject();
+	var createNewProcess = (rwProcessMap.size===0 || ownProcess);
+	var useExistingObj = null;
+	if(!createNewProcess){
+		createNewProcess = true;
+		for(var [child,obj] of rwProcessMap){
+			if(!obj.ownProcess){
+				createNewProcess = false;
+				useExistingObj = obj;
+				break;
+			}
+		}
+	}
+	if(createNewProcess){
+		var rwPObj = { ownProcess, id:'require-worker:process:'+(++rwProcessIndex)+':'+Date.now() };
+		rwPObj.ipcTransport = ipcTransport.create({ id:rwPObj.id });
+		rwPObj.child = client.child = childProcess.fork(__filename,['--rwProcess',rwPObj.id],client.options.forkOptions);
+		rwPObj.ipcTransport.setChild(rwPObj.child);
+		rwProcessMap.set(rwPObj.child,rwPObj);
+		return rwPObj;
+	} else {
+		client.child = useExistingObj.child;
+		return useExistingObj;
 	}
 };
 
-var hostExports = null, hostObject = null;
+var checkNewProcess = ()=>{
+	if(require.main===module && process.argv.length===4 && process.argv[2]==='--rwProcess'){
+		var ipcTransportID = process.argv[3];
+		var transport = ipcTransport.create({
+			id: ipcTransportID,
+			parent: true
+		});
+		var transportEvents = transport.createMessageEventEmitter();
+		transportEvents.on('processReady?',()=>{
+			transportEvents.send('processReady!');
+		});
+		transportEvents.on('requireHost',(hostOptions)=>{
+			new host(hostOptions);
+		});
+		transportEvents.send('processReady!');
+	}
+};
+
+var hostsMap = new Map();
 var host = function requireWorkerHost({ transport, ipcTransportID, file }){
-	var self = hostObject = this;
+	var self = this;
 	if(transport!=='ipcTransport') throw Error("Invalid transport, only ipcTransport is currently implemented");
 	self.events = new eventEmitter();
 	self.ipcTransport = ipcTransport.create({
@@ -146,8 +190,10 @@ var host = function requireWorkerHost({ transport, ipcTransportID, file }){
 			self.proxyCom.setProxyTarget(self.exports);
 		}
 	});
+	try{ hostsMap.set(path.resolve(file),self); }catch(err){}
 	try{
-		self.exports = hostExports = require(file);
+		self.exports = require(file);
+		hostsMap.set(self.exports,self);
 	}catch(err){
 		requireError = err;
 	}
@@ -158,4 +204,4 @@ host.prototype = {
 	
 };
 
-checkRequireHost();
+checkNewProcess();
