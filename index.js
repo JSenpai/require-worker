@@ -102,6 +102,9 @@ const client = exports.requireWorkerClient = function requireWorkerClient(file,o
 			self.events.emit('requireSuccess');
 		}
 	});
+	self.proxyCom.transport.once('host._destroy',()=>{
+		self._destroy();
+	});
 	self.proxyCom.connectTransportClient();
 	self.proxy = self.proxyCom.createMainProxyInterface();
 	clientsMap.set(self.proxy,self);
@@ -111,11 +114,15 @@ const client = exports.requireWorkerClient = function requireWorkerClient(file,o
 
 client.prototype = {
 	_destroy: function(){
+		if(this._destroyed) return;
+		this.proxyCom.dataHandler._preDestroy();
+		this.proxyCom._preDestroy();
 		if(clientsMap.has(this.proxy) && clientsMap.get(this.proxy)===this) clientsMap.delete(this.proxy);
 		if(clientsMap.has(this.file) && clientsMap.get(this.file)===this) clientsMap.delete(this.file);
 		if(clientsMap.has(this.hostOptions.file) && clientsMap.get(this.hostOptions.file)===this) clientsMap.delete(this.hostOptions.file);
 		var proxyCom = this.proxyCom;
 		this.events.removeAllListeners();
+		if(this.proxyCom && this.proxyCom.transport && this.proxyCom.transport.send) this.proxyCom.transport.send('client._destroy');
 		this.proxyCom._destroy();
 		if(this.rwProcess){
 			var removedObjects = [];
@@ -146,6 +153,7 @@ client.prototype = {
 		}
 		this.setChildReferenced = ()=>{ throw Error("requireWorker client has been destroyed"); };
 		proxyCom.proxyInterfaceGet = function(){ throw Error("requireWorker client has been destroyed, proxy methods are not available"); };
+		this._destroyed = true;
 	},
 	setChildReferenced: function(bool){
 		if(bool) this.child.ref();
@@ -232,6 +240,9 @@ const host = exports.requireWorkerHost = function requireWorkerHost({ transport,
 		requireWorkerHost: self
 	});
 	var requireError;
+	self.proxyCom.transport.once('client._destroy',()=>{
+		this._destroy();
+	});
 	self.proxyCom.connectTransportHost(()=>{
 		if(requireError){
 			self.proxyCom.transport.send("requireState",_.pick(requireError,['message','stack']));
@@ -240,7 +251,10 @@ const host = exports.requireWorkerHost = function requireWorkerHost({ transport,
 			self.proxyCom.setProxyTarget(self.exports);
 		}
 	});
-	try{ hostsMap.set(require.resolve(file),self); }catch(err){}
+	try{
+		self.file = require.resolve(file);
+		hostsMap.set(require.resolve(file),self);
+	}catch(err){}
 	try{
 		self.exports = require(file);
 		hostsMap.set(self.exports,self);
@@ -251,7 +265,20 @@ const host = exports.requireWorkerHost = function requireWorkerHost({ transport,
 };
 
 host.prototype = {
-	
+	_destroy: function(){
+		if(this._destroyed) return;
+		if(this.proxyCom && this.proxyCom.transport && this.proxyCom.transport.send) this.proxyCom.transport.send('host._destroy');
+		if(hostsMap.has(this.exports) && clientsMap.get(this.exports)===this) clientsMap.delete(this.exports);
+		if(this.file && clientsMap.has(this.file) && clientsMap.get(this.file)===this) clientsMap.delete(this.file);
+		var proxyCom = this.proxyCom;
+		this.events.removeAllListeners();
+		this.proxyCom._destroy();
+		
+		for(var key in ['events','ipcTransport','proxyCom','exports']){
+			try{ delete this[key]; }catch(err){}
+		}
+		this._destroyed = true;
+	}
 };
 
 checkNewProcess();

@@ -4,6 +4,7 @@
 exports.foo = 'bar';
 
 exports.hello = (arg)=>{
+	//require('../')(exports)._destroy();
 	return 'Hello '+arg+'!';
 };
 
