@@ -41,6 +41,7 @@ new test.foo('set test').then(({value})=>{
 
 test.foo().then(({value})=>{
 	console.log("test.foo():",value);
+	//requireWorker(test)._destroy();
 }).catch((err)=>{
 	console.error("test.foo() error:",err);
 });

@@ -17,7 +17,7 @@ module.exports = exports = (target)=>{
 	return clientsMap.get(target);
 };
 
-module.exports.require = (path,options)=>new client(path,options);
+exports.require = (path,options)=>new client(path,options);
 
 const getStackFiles = function getStackFiles(){
 	let opst = Error.prepareStackTrace, thisError, result = [];
@@ -37,19 +37,15 @@ const getStackFiles = function getStackFiles(){
 
 var clientIndex = 0;
 const clientsMap = new Map();
-const client = function requireWorkerClient(file,options={ ownProcess:false, shareProcess:false, parentModule:false }){
+const client = exports.requireWorkerClient = function requireWorkerClient(file,options={ ownProcess:false, shareProcess:false, parentModule:false, returnClient:false }){
 	if(!_.isString(file)) throw Error("first argument must be a string (require path)");
 	if(!_.isObject(options)) throw Error("second argument must be an object (options) or undefined");
 	var self = this;
-	self.id = (++clientIndex)+':'+_.uniqueId()+':'+Date.now();//+':'+file;
+	self.id = 'require-worker:'+(++clientIndex)+':'+_.uniqueId()+':'+Date.now();//+':'+file;
 	self.options = options;
-	self.events = new eventEmitter();
-	self.ipcTransport = ipcTransport.create({
-		id: 'require-worker:'+self.id
-	});
 	var hostOptions = {
 		transport: 'ipcTransport',
-		ipcTransportID: self.ipcTransport.id
+		ipcTransportID: self.id
 	};
 	self.file = file;
 	if(path.isAbsolute(file)) hostOptions.file = file;
@@ -72,8 +68,17 @@ const client = function requireWorkerClient(file,options={ ownProcess:false, sha
 		}catch(err){}
 		if(!hostOptions.file) hostOptions.file = file;
 	}
+	if(!options.ownProcess && !options.shareProcess && clientsMap.has(hostOptions.file)){
+		var existingClient = clientsMap.get(hostOptions.file);
+		if(options.returnClient) return existingClient;
+		else return existingClient.proxy;
+	}
+	self.events = new eventEmitter();
+	self.ipcTransport = ipcTransport.create({
+		id: self.id
+	});
 	self.hostOptions = hostOptions;
-	var rwPObj = rwProcess({ client:self });
+	var rwPObj = self.rwProcess = rwProcess({ client:self });
 	self.ipcTransport.setChild(self.child);
 	var rwPTransport = rwPObj.ipcTransport.createMessageEventEmitter();
 	rwPTransport.once('processReady!',()=>{
@@ -88,19 +93,60 @@ const client = function requireWorkerClient(file,options={ ownProcess:false, sha
 	});
 	self.proxyCom.transport.once('requireState',({message,stack}={})=>{
 		if(stack){
-			if(rwPObj.ownProcess) self.child.kill();
 			var e = new Error(message);
+			e.code = 'REQUIRE_FILE_NOT_FOUND';
 			e.stack = stack;
 			self.events.emit('error',e); //throw e;
+			self._destroy();
+		} else {
+			self.events.emit('requireSuccess');
 		}
 	});
 	self.proxyCom.connectTransportClient();
 	self.proxy = self.proxyCom.createMainProxyInterface();
 	clientsMap.set(self.proxy,self);
-	return self.proxy;
+	if(options.returnClient) return self;
+	else return self.proxy;
 };
 
 client.prototype = {
+	_destroy: function(){
+		if(clientsMap.has(this.proxy) && clientsMap.get(this.proxy)===this) clientsMap.delete(this.proxy);
+		if(clientsMap.has(this.file) && clientsMap.get(this.file)===this) clientsMap.delete(this.file);
+		if(clientsMap.has(this.hostOptions.file) && clientsMap.get(this.hostOptions.file)===this) clientsMap.delete(this.hostOptions.file);
+		var proxyCom = this.proxyCom;
+		this.events.removeAllListeners();
+		this.proxyCom._destroy();
+		if(this.rwProcess){
+			var removedObjects = [];
+			for(var [key,obj] of rwProcessMap){
+				if(key!==obj.child && (key===this || obj.client===this)){
+					if(removedObjects.indexOf(obj.child)===-1) removedObjects.push(obj);
+					rwProcessMap.delete(key);
+				}
+			}
+			var hasChilds = [];
+			for(var [key,obj] of rwProcessMap){
+				if(key!==obj.child) hasChilds.push(obj.child);
+			}
+			for(var i=0,l=removedObjects.length; i<l; i++){
+				let obj = removedObjects[i];
+				if(hasChilds.indexOf(obj.child)===-1){
+					if(rwProcessMap.has(obj.child)) rwProcessMap.delete(obj.child);
+					if(obj.ipcTransport) obj.ipcTransport._destroy();
+					obj.child.unref();
+					obj.child.kill();
+					delete obj.child;
+					delete obj.ipcTransport;
+				}
+			}
+		}
+		for(var key in ['events','ipcTransport','proxyCom','proxy','child','rwProcess']){
+			try{ delete this[key]; }catch(err){}
+		}
+		this.setChildReferenced = ()=>{ throw Error("requireWorker client has been destroyed"); };
+		proxyCom.proxyInterfaceGet = function(){ throw Error("requireWorker client has been destroyed, proxy methods are not available"); };
+	},
 	setChildReferenced: function(bool){
 		if(bool) this.child.ref();
 		else this.child.unref();
@@ -118,8 +164,8 @@ const rwProcess = function(options={}){
 	var useExistingObj = null;
 	if(!createNewProcess){
 		createNewProcess = true;
-		for(var [child,obj] of rwProcessMap){
-			if(shareProcess && (shareProcess===obj.client || shareProcess===obj.client.proxy || shareProcess===child)){
+		for(var [key,obj] of rwProcessMap){
+			if(shareProcess && (shareProcess===obj.client || shareProcess===obj.client.proxy || shareProcess===key)){
 				createNewProcess = false;
 				useExistingObj = obj;
 				break;
@@ -143,10 +189,14 @@ const rwProcess = function(options={}){
 		//process.execArgv = processArgv;
 		rwPObj.ipcTransport.setChild(rwPObj.child);
 		rwProcessMap.set(rwPObj.child,rwPObj);
+		rwProcessMap.set(client,rwPObj);
 		return rwPObj;
 	} else {
-		client.child = useExistingObj.child;
-		return useExistingObj;
+		var rwPObj = _.clone(useExistingObj);
+		rwPObj.client = client;
+		client.child = rwPObj.child;
+		rwProcessMap.set(client,rwPObj);
+		return rwPObj;
 	}
 };
 
@@ -169,7 +219,7 @@ const checkNewProcess = ()=>{
 };
 
 const hostsMap = new Map();
-const host = function requireWorkerHost({ transport, ipcTransportID, file }){
+const host = exports.requireWorkerHost = function requireWorkerHost({ transport, ipcTransportID, file }){
 	var self = this;
 	if(transport!=='ipcTransport') throw Error("Invalid transport, only ipcTransport is currently implemented");
 	self.events = new eventEmitter();
