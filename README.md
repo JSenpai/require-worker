@@ -1,9 +1,12 @@
 # require-worker - Nodejs Module
-> require with a fork
+> require with a fork and a promise
+
+<!--[![NPM Version][npm-image]][npm-url]-->
+<!--[![Downloads Stats][npm-downloads]][npm-url]-->
 
 [![Travis CI][travis-image]][travis-url]
 
-Load a module in a new process. Ideally similar to Nodejs's require().
+Load a module in a new process, then use promises to interact with it.
 
 ## What is this?
 
@@ -23,32 +26,29 @@ I decided to create this module because simply creating a forked process and cha
 
 ## Installation
 
-Warning: This project is written with ES6 features. The examples are written with ES7 features.
+Warning: This project is written with ES6 features.
 
-This branch is not currently available on NPM, as this branch is still in pre-release development.
+Warning: This is currently in pre-release. It is not production-ready. Not all planned features are implemented yet.
 
-To try this pre-release, git clone this branch.
+<!--Install the module via [NPM][npm-url] (replace `@version` below with [latest release tag][github-tags])
+```
+npm install require-worker@version --save
+```
+Or [download the latest release][github-releases], or git clone the [repository on GitHub][github-branch].-->
 
-### How to use
+## How to use
 
 Todo. See examples.
 
 ## Tests
 
-Install Mocha globally:
-```
-npm install -g mocha
-```
+View results on [Travis-CI][travis-url], or run tests manually:
 
-Install development dependencies for this module:
-```
-npm install
-```
+Install Mocha globally: `npm install -g mocha`
 
-Then run the test:
-```
-npm test
-```
+Install development dependencies for this module: `npm install`
+
+Then run the test: `npm test`
 
 Since this module spawns child processors, some test results may take a while to complete.
 
@@ -84,6 +84,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+[github-url]: https://github.com/Unchosen/require-worker
+[github-branch]: https://github.com/Unchosen/require-worker/tree/dev-pre-v1
+[github-releases]: https://github.com/Unchosen/require-worker/releases
+[github-tags]: https://github.com/Unchosen/require-worker/tags
 [npm-image]: https://img.shields.io/npm/v/require-worker.svg?style=flat-square
 [npm-url]: https://npmjs.org/package/require-worker
 [npm-downloads]: https://img.shields.io/npm/dm/require-worker.svg?style=flat-square
