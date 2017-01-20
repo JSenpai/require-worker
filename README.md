@@ -1,6 +1,8 @@
 # require-worker - Nodejs Module
 > require with a fork
 
+[![Travis CI][travis-image]][travis-url]
+
 Load a module in a new process. Ideally similar to Nodejs's require().
 
 ## What is this?
@@ -33,7 +35,24 @@ Todo. See examples.
 
 ## Tests
 
-Todo. Run examples for now.
+Install Mocha globally:
+```
+npm install -g mocha
+```
+
+Install development dependencies for this module:
+```
+npm install
+```
+
+Then run the test:
+```
+npm test
+```
+
+Since this module spawns child processors, some test results may take a while to complete.
+
+Tests are written with ES6 features just like this module.
 
 ## Contributors
 
@@ -68,3 +87,5 @@ SOFTWARE.
 [npm-image]: https://img.shields.io/npm/v/require-worker.svg?style=flat-square
 [npm-url]: https://npmjs.org/package/require-worker
 [npm-downloads]: https://img.shields.io/npm/dm/require-worker.svg?style=flat-square
+[travis-image]: https://travis-ci.org/Unchosen/require-worker.svg?branch=dev-pre-v1
+[travis-url]: https://travis-ci.org/Unchosen/require-worker
