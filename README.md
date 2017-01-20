@@ -30,11 +30,11 @@ Warning: This project is written with ES6 features.
 
 Warning: This is currently in pre-release. It is not production-ready. Not all planned features are implemented yet.
 
-<!--Install the module via [NPM][npm-url] (replace `@version` below with [latest release tag][github-tags])
+Install the pre-release module via [NPM][npm-url]
 ```
-npm install require-worker@version --save
+npm install require-worker@pre-v1 --save
 ```
-Or [download the latest release][github-releases], or git clone the [repository on GitHub][github-branch].-->
+Or [download the latest release][github-releases], or git clone the [repository on GitHub][github-branch].
 
 ## How to use
 
