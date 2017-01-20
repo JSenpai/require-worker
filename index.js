@@ -36,7 +36,7 @@ const getStackFiles = function getStackFiles(){
 };
 
 var clientIndex = 0;
-const clientsMap = new Map();
+const clientsMap = exports.clientsMap = new Map();
 const client = exports.requireWorkerClient = function requireWorkerClient(file,options={ ownProcess:false, shareProcess:false, parentModule:false, returnClient:false }){
 	if(!_.isString(file)) throw Error("first argument must be a string (require path)");
 	if(!_.isObject(options)) throw Error("second argument must be an object (options) or undefined");
@@ -91,6 +91,7 @@ const client = exports.requireWorkerClient = function requireWorkerClient(file,o
 		transport: { type:'ipcTransport', instance:self.ipcTransport },
 		requireWorkerClient: self
 	});
+	self.proxyCom.client = self;
 	self.proxyCom.transport.once('requireState',({message,stack}={})=>{
 		if(stack){
 			var e = new Error(message);
@@ -100,6 +101,9 @@ const client = exports.requireWorkerClient = function requireWorkerClient(file,o
 			self._destroy();
 		} else {
 			self.events.emit('requireSuccess');
+			self.events.on('newListener',(eventName,listener)=>{
+				if(eventName==='requireSuccess') setImmediate(()=>self.events.emit('requireSuccess'));
+			});
 		}
 	});
 	self.proxyCom.transport.once('host._destroy',()=>{
@@ -161,6 +165,36 @@ client.prototype = {
 	}
 };
 
+const rwPreparedProcessMap = new Map();
+exports.prepareProcesses = function(options={ count:1, forkOptions:{} }){
+	for(var i=0,l=options.count; i<l; i++){
+		var rwPObj = rwCreateProcess(_.omit(options,['count']));
+		rwPObj.preparedProcess = true;
+		rwPreparedProcessMap.set(rwPObj.child,rwPObj);
+	}
+	return true;
+};
+exports.destroyPrepareProcesses = function(){
+	for(var [key,obj] of rwPreparedProcessMap){
+		obj.child.unref();
+		obj.child.kill();
+		rwPreparedProcessMap.delete(key);
+	}
+	return true;
+};
+const rwCreateProcess = function(options={ forkOptions:{} }){
+	var rwPObj = { id:'require-worker:process:'+(++rwProcessIndex)+':'+Date.now() };
+	rwPObj.ipcTransport = ipcTransport.create({ id:rwPObj.id });
+	if(!('forkOptions' in options)) options.forkOptions = {};
+	if(!('cwd' in options.forkOptions)) options.forkOptions.cwd = process.cwd();
+	//var processArgv = _.clone(process.execArgv);
+	//if(process.execArgv.indexOf('--inspect')!==-1) process.execArgv.splice(process.execArgv.indexOf('--inspect'),1);
+	rwPObj.child = childProcess.fork(__filename,['--rwProcess',rwPObj.id],options.forkOptions);
+	//process.execArgv = processArgv;
+	rwPObj.ipcTransport.setChild(rwPObj.child);
+	return rwPObj;
+};
+
 var rwProcessIndex = 0;
 const rwProcessMap = new Map();
 const rwProcess = function(options={}){
@@ -187,15 +221,22 @@ const rwProcess = function(options={}){
 		if(shareProcess && !useExistingObj) throw Error("Existing require-worker process could not be found, set shareProcess to a client object, client proxy, or a process child");
 	}
 	if(createNewProcess){
-		var rwPObj = { ownProcess, id:'require-worker:process:'+(++rwProcessIndex)+':'+Date.now(), client };
-		rwPObj.ipcTransport = ipcTransport.create({ id:rwPObj.id });
+		var rwPObj, preparedProcess = false;
 		if(!('forkOptions' in client.options)) client.options.forkOptions = {};
-		if(!('cwd' in client.options.forkOptions)) client.options.forkOptions.cwd = process.cwd();
-		//var processArgv = _.clone(process.execArgv);
-		//if(process.execArgv.indexOf('--inspect')!==-1) process.execArgv.splice(process.execArgv.indexOf('--inspect'),1);
-		rwPObj.child = client.child = childProcess.fork(__filename,['--rwProcess',rwPObj.id],client.options.forkOptions);
-		//process.execArgv = processArgv;
-		rwPObj.ipcTransport.setChild(rwPObj.child);
+		if(!('cwd' in client.options.forkOptions)){
+			for(var [key,obj] of rwPreparedProcessMap){
+				if(obj.preparedProcess && !preparedProcess){
+					preparedProcess = obj;
+					rwPreparedProcessMap.delete(key);
+					break;
+				}
+			}
+		}
+		if(preparedProcess) rwPObj = preparedProcess;
+		else rwPObj = rwCreateProcess({ forkOptions:client.options.forkOptions });
+		rwPObj.ownProcess = ownProcess;
+		rwPObj.client = client;
+		client.child = rwPObj.child;
 		rwProcessMap.set(rwPObj.child,rwPObj);
 		rwProcessMap.set(client,rwPObj);
 		return rwPObj;
