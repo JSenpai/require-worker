@@ -14,20 +14,26 @@ var proxyCom = require('../lib/proxy-communication');
 var proxyDataHandler = require('../lib/proxy-data-handler');
 
 var testModuleFile = '../examples/tests_module';
+var prepareProcessCount = 5;
 
 describe("Main: require-worker",()=>{
 	
-	describe("preparing some processes (optional)",()=>{
-		it("should succeed",(done)=>{
-			var r = requireWorker.prepareProcesses({ count:5 });
-			expect(r).to.be.true;
-			done();
+	if(prepareProcessCount>0){
+		describe("preparing "+prepareProcessCount+" processes (optional)",()=>{
+			
+			it("should succeed",(done)=>{
+				var r = requireWorker.prepareProcesses({ count:prepareProcessCount });
+				expect(r).to.be.true;
+				expect(requireWorker.getPreparedProcessesCount()).to.equal(prepareProcessCount);
+				done();
+			});
+			
 		});
-	});
+	}
 	
 	describe("check require-worker client",()=>{
 
-		it("should have properties on requireWorker",()=>{
+		it("should have properties on requireWorker",(done)=>{
 			expect(requireWorker).to.have.property('require');
 			expect(requireWorker).to.have.property('requireWorkerClient');
 			expect(requireWorker).to.have.property('requireWorkerHost');
@@ -37,11 +43,14 @@ describe("Main: require-worker",()=>{
 			expect(requireWorker.require).to.be.a('function');
 			expect(requireWorker.requireWorkerClient).to.be.a('function');
 			expect(requireWorker.requireWorkerHost).to.be.a('function');
+			done();
 		});
-
+		
+		var firstClient = null, preparedProcessesCount = 0;
 		it("should succeed to require existing module",(done)=>{
+			preparedProcessesCount = requireWorker.getPreparedProcessesCount();
 			try{
-				var client = requireWorker.require(testModuleFile,{ returnClient:true }); // New Client
+				var client = firstClient = requireWorker.require(testModuleFile,{ returnClient:true }); // New Client
 				expect(client).to.be.instanceof(requireWorker.requireWorkerClient);
 				if(!client.events && client._destroyed) return done("requireWorker client has been destroyed");
 				expect(client).to.have.property('events');
@@ -54,6 +63,11 @@ describe("Main: require-worker",()=>{
 			}catch(err){
 				done("requireWorker client constructor threw an error when it should not have:",err);
 			}
+		});
+		
+		it("new client should have used a prepared process",(done)=>{
+			expect(requireWorker.getPreparedProcessesCount()).to.equal(preparedProcessesCount-1);
+			done();
 		});
 
 		it("should fail to require non-existant module",(done)=>{
@@ -75,7 +89,7 @@ describe("Main: require-worker",()=>{
 			}
 		});
 		
-		it("should have properties on requireWorker client",()=>{
+		it("should have properties on requireWorker client",(done)=>{
 			var client = requireWorker.require(testModuleFile,{ returnClient:true }); // Returns Cached Client
 			expect(client).to.have.property('id');
 			expect(client).to.have.property('child');
@@ -85,84 +99,135 @@ describe("Main: require-worker",()=>{
 			expect(client).to.have.property('proxyCom');
 			expect(client.proxyCom).to.be.instanceof(proxyCom.proxyCom);
 			expect(client).to.have.property('proxy');
+			expect(client).to.have.property('preConfiguredProxy');
+			expect(client.preConfiguredProxy).to.be.a('function');
+			done();
 		});
 		
-		it("should return client via requireWorker( proxy )",()=>{
+		it("should return cached client",(done)=>{
+			var client = requireWorker.require(testModuleFile,{ returnClient:true }); // Returns Cached Client
+			expect(client).to.equal(firstClient);
+			done();
+		});
+		
+		it("should return client via requireWorker( proxy )",(done)=>{
 			var client = requireWorker.require(testModuleFile,{ returnClient:true }); // Returns Cached Client
 			expect(client).to.equal(requireWorker(client.proxy));
+			done();
 		});
 
-		it("should return client via requireWorker( filePath ), with there being no new client with same file path since client was first cached",()=>{
+		it("should return client via requireWorker( filePath ), with there being no new client with same file path since client was first cached",(done)=>{
 			var client = requireWorker.require(testModuleFile,{ returnClient:true }); // Returns Cached Client
 			expect(client).to.equal(requireWorker(testModuleFile));
+			done();
 		});
 
-		it("should return requireWorker client from cache if file already required",()=>{
+		it("should return requireWorker client from cache if file already required",(done)=>{
 			var client1 = requireWorker.require(testModuleFile,{ returnClient:true }); // Returns Cached Client
 			var client2 = requireWorker.require(testModuleFile,{ returnClient:true }); // Returns Cached Client
 			expect(client1).to.equal(client2);
 			expect(client1.child).to.equal(client2.child);
 			expect(client1.rwProcess).to.equal(client2.rwProcess);
+			done();
 		});
 		
-		it("should return new requireWorker client if shareProcess is specified, and also share same client process",()=>{
+		it("should return new requireWorker client if shareProcess is specified, and also share same client process",(done)=>{
 			var client1 = requireWorker.require(testModuleFile,{ returnClient:true }); // Returns Cached Client
 			var client2 = requireWorker.require(testModuleFile,{ returnClient:true, shareProcess:client1 }); // New Client, Existing Child Process
 			expect(client1).to.not.equal(client2);
 			expect(client1.child).to.equal(client2.child);
 			expect(client1.rwProcess).to.not.equal(client2.rwProcess);
+			done();
 		});
 		
-		it("should return new requireWorker client if ownProcess is specified, and also have different child process",()=>{
+		it("should return new requireWorker client if ownProcess is specified, and also have different child process",(done)=>{
 			var client1 = requireWorker.require(testModuleFile,{ returnClient:true }); // Returns Cached Client
 			var client2 = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client, New Child Process
 			expect(client1).to.not.equal(client2);
 			expect(client1.child).to.not.equal(client2.child);
 			expect(client1.rwProcess).to.not.equal(client2.rwProcess);
+			done();
 		});
 		
-		it("should have different child processes if two new clients are created with ownProcess:true",()=>{
+		it("should have different child processes if two new clients are created with ownProcess:true",(done)=>{
 			var client1 = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client, New Child Process
 			var client2 = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client, New Child Process
 			expect(client1).to.not.equal(client2);
 			expect(client1.child).to.not.equal(client2.child);
 			expect(client1.rwProcess).to.not.equal(client2.rwProcess);
+			done();
 		});
 		
-		it("should have same child process if two new clients are created when the first client has ownProcess:true, and the second client has shareProcess set to the first client",()=>{
+		it("should have same child process if two new clients are created when the first client has ownProcess:true, and the second client has shareProcess set to the first client",(done)=>{
 			var client1 = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client, New Child Process
 			var client2 = requireWorker.require(testModuleFile,{ returnClient:true, shareProcess:client1 }); // New Client, Existing Child Process
 			expect(client1).to.not.equal(client2);
 			expect(client1.child).to.equal(client2.child);
 			expect(client1.rwProcess).to.not.equal(client2.rwProcess);
+			done();
 		});
 		
-		it("should return different client via requireWorker( filePath ), as there is a new client created with same file path since first cached client",()=>{
+		it("should return different client via requireWorker( filePath ), as there is a new client created with same file path since first cached client",(done)=>{
 			var client = requireWorker.require(testModuleFile,{ returnClient:true }); // Returns Cached Client
 			expect(client).to.not.equal(requireWorker(testModuleFile));
+			done();
 		});
 		
-		it("should reject promises with error code 'DESTROYED' - client destroy",(done)=>{
-			var client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
-			client.proxy.stringData().then(()=>{
-				done("promise action succeeded when it should not have");
-			},(err)=>{
-				expect(err).to.have.property('code');
-				expect(err.code).to.equal('DESTROYED');
-				done();
+	});
+	
+	describe("check require-worker client destruction",()=>{
+		
+		describe("calls should error with code 'DESTROYED' on client destroy",()=>{
+			var client, proxy;
+			
+			it("have promise action work after create, before destroy",(done)=>{
+				client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
+				proxy = client.proxy;
+				proxy.stringData().then(()=>{
+					done();
+				},(err)=>{
+					done("promise action failed when it should not have");
+				});
 			});
-			client._destroy();
+			
+			it("have promise action called after destroy, and reject with destroy error",(done)=>{
+				try{
+					client._destroy();
+				}catch(err){
+					done("client._destroy() errored when it should not have: "+err);
+				}
+				var promise;
+				try{
+					promise = proxy.stringData();
+				}catch(err){
+					done("proxy invoker errored when it should not have: "+err);
+				};
+				if(promise){
+					promise.then(()=>{
+						done("promise action succeeded when it should not have");
+					},(err)=>{
+						expect(err).to.have.property('code');
+						expect(err.code).to.equal('DESTROYED');
+						done();
+					});
+				}
+			});
+			
 		});
-
-		it("should reject promises with error code 'DESTROYED' - host destroy",(done)=>{
-			var client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
-			client.proxy.destroyHost().then(()=>{
-				done("promise action succeeded when it should not have");
-			},(err)=>{
-				expect(err).to.have.property('code');
-				expect(err.code).to.equal('DESTROYED');
-				done();
+		
+		describe("should reject promises with error code 'DESTROYED' on host destroy",()=>{
+			
+			it("have promise action error after destroy",(done)=>{
+				var client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
+				client.proxy.destroyHost().then(()=>{
+					done("promise action succeeded when it should not have");
+				},(err)=>{
+					expect(err).to.have.property('code');
+					expect(err.code).to.equal('DESTROYED');
+					done();
+				});
 			});
+			
 		});
 
 		//it("destroy existing clients, with 100ms post-delay",(done)=>{
@@ -173,8 +238,17 @@ describe("Main: require-worker",()=>{
 	});
 	
 	describe("proxy actions on main interface (target = host export)",()=>{
-		var client = requireWorker.require(testModuleFile,{ returnClient:true }); // New Client
-		var proxy = client.proxy;
+		var client, proxy;
+		
+		describe("create client",()=>{
+			
+			it("should succeed",(done)=>{
+				client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
+				proxy = client.proxy;
+				done();
+			});
+			
+		});
 		
 		describe("proxy()",()=>{
 			
@@ -207,8 +281,9 @@ describe("Main: require-worker",()=>{
 				expect(proxy).to.have.ownProperty('constructor');
 			});
 			
-			var c = proxy.constructor;
+			var c;
 			it("should be a function",()=>{
+				c = proxy.constructor;
 				expect(c).to.be.a('function');
 			});
 			
@@ -225,22 +300,26 @@ describe("Main: require-worker",()=>{
 		
 		describe("proxy get",()=>{
 			
-			let a = proxy.stringData;
+			var a;
 			it("return result function on property get, with existing target property",()=>{
+				a = proxy.stringData;
 				expect(a).to.be.a('function');
 				expect(a.name).to.equal('requireWorkerProxyInvoker');
 			});
 			
-			let h = proxy.somethingThatDoesNotExist;
+			var h;
 			it("return result function on property get, with non-existant target property",()=>{
+				h = h = proxy.somethingThatDoesNotExist;
 				expect(h).to.be.a('function');
 				expect(h.name).to.equal('requireWorkerProxyInvoker');
 			});
 			
-			let b = a();
+			var b;
 			it("return promise when result function is called, with existing target property",()=>{
+				b = a();
 				expect(b).to.be.a('promise');
 			});
+			
 			it("check if promise resolves, with existing target property",(done)=>{
 				b.then(({value})=>{
 					done();
@@ -279,9 +358,10 @@ describe("Main: require-worker",()=>{
 				expect(b.configure).to.be.throw(Error);
 			});
 			
-			let d = proxy.stringData();
-			let e = d.configure();
+			var d, e;
 			it("promise.configure() returns same promise",()=>{
+				d = proxy.stringData();
+				e = d.configure();
 				expect(e).to.equal(d);
 			});
 			
@@ -311,6 +391,34 @@ describe("Main: require-worker",()=>{
 					}
 				},(err)=>{
 					done("resolveError:true configure action errored when it should not have: "+err,err);
+				});
+			});
+			
+		});
+		
+		describe("preConfigure options",()=>{
+			var preConfiguredProxy;
+			
+			it("create preConfiguredProxy",(done)=>{
+				preConfiguredProxy = client.preConfiguredProxy({ resolveError:true });
+				done();
+			});
+			
+			it("preConfiguredProxy instance should be different from client.proxy",()=>{
+				expect(preConfiguredProxy).to.not.equal(client.proxy);
+			});
+			
+			it("promise should resolve instead of rejecting via client.preConfiguredProxy({ resolveError:true }), and no direct configure on promise",(done)=>{
+				preConfiguredProxy.somethingThatDoesNotExist1().then(({ value, error })=>{
+					if(error){
+						expect(error).to.have.property('code');
+						expect(error.code).to.equal('PROPERTY_NOT_FOUND');
+						done();
+					} else {
+						done("resolveError:true preConfigure action resolved with a value when it should not have. value: "+value);
+					}
+				},(err)=>{
+					done("resolveError:true preConfigure action errored when it should not have: "+err,err);
 				});
 			});
 			
@@ -522,28 +630,31 @@ describe("Main: require-worker",()=>{
 		
 		
 		// promise replies not yet implemented
-		/*it("set timeout via .configure({ timeout:1 })",(done)=>{
-			proxy.promiseNeverFinish().configure({ timeout:1 }).then(({value})=>{
-				done("stringData action succeeded when it should not have");
-			},(err)=>{
-				expect(err).to.have.property('code');
-				expect(err.code).to.equal('TIMEOUT');
-				done();
-			});
-		});*/
+		//it("set timeout via .configure({ timeout:1 })",(done)=>{
+		//	proxy.promiseNeverFinish().configure({ timeout:1 }).then(({value})=>{
+		//		done("stringData action succeeded when it should not have");
+		//	},(err)=>{
+		//		expect(err).to.have.property('code');
+		//		expect(err.code).to.equal('TIMEOUT');
+		//		done();
+		//	});
+		//});
 		
 	});
 	
 	describe("destroy clients and processes",()=>{
+		
 		it("destroy existing clients",(done)=>{
 			for(var [key,client] of requireWorker.clientsMap) client._destroy();
 			done();
 		});
+		
 		it("destroy remaining prepared processes",(done)=>{
 			var r = requireWorker.destroyPrepareProcesses();
 			expect(r).to.be.true;
 			done();
 		});
+		
 	});
 	
 });

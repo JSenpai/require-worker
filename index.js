@@ -117,56 +117,73 @@ const client = exports.requireWorkerClient = function requireWorkerClient(file,o
 };
 
 client.prototype = {
-	_destroy: function(){
-		if(this._destroyed) return;
+	_destroy: function(destroyNow){
+		if(this._destroyed || this._destroying) return;
+		this._destroying = true;
 		this.proxyCom.dataHandler._preDestroy();
 		this.proxyCom._preDestroy();
-		if(clientsMap.has(this.proxy) && clientsMap.get(this.proxy)===this) clientsMap.delete(this.proxy);
-		if(clientsMap.has(this.file) && clientsMap.get(this.file)===this) clientsMap.delete(this.file);
-		if(clientsMap.has(this.hostOptions.file) && clientsMap.get(this.hostOptions.file)===this) clientsMap.delete(this.hostOptions.file);
-		var proxyCom = this.proxyCom;
-		this.events.removeAllListeners();
-		if(this.proxyCom && this.proxyCom.transport && this.proxyCom.transport.send) this.proxyCom.transport.send('client._destroy');
-		this.proxyCom._destroy();
-		if(this.rwProcess){
-			var removedObjects = [];
-			for(var [key,obj] of rwProcessMap){
-				if(key!==obj.child && (key===this || obj.client===this)){
-					if(removedObjects.indexOf(obj.child)===-1) removedObjects.push(obj);
-					rwProcessMap.delete(key);
+		if(this.proxyCom && this.proxyCom.transport && this.proxyCom.transport.send) this.proxyCom.transport.send('client._destroy'); // After preDestroy
+		setImmediate(()=>{
+			if(clientsMap.has(this.proxy) && clientsMap.get(this.proxy)===this) clientsMap.delete(this.proxy);
+			if(clientsMap.has(this.file) && clientsMap.get(this.file)===this) clientsMap.delete(this.file);
+			if(clientsMap.has(this.hostOptions.file) && clientsMap.get(this.hostOptions.file)===this) clientsMap.delete(this.hostOptions.file);
+			var proxyCom = this.proxyCom;
+			this.events.removeAllListeners();
+			this.proxyCom._destroy();
+			if(this.rwProcess){
+				var removedObjects = [];
+				for(var [key,obj] of rwProcessMap){
+					if(key!==obj.child && (key===this || obj.client===this)){
+						if(removedObjects.indexOf(obj.child)===-1) removedObjects.push(obj);
+						rwProcessMap.delete(key);
+					}
+				}
+				var hasChilds = [];
+				for(var [key,obj] of rwProcessMap){
+					if(key!==obj.child) hasChilds.push(obj.child);
+				}
+				for(var i=0,l=removedObjects.length; i<l; i++){
+					let obj = removedObjects[i];
+					if(hasChilds.indexOf(obj.child)===-1){
+						if(rwProcessMap.has(obj.child)) rwProcessMap.delete(obj.child);
+						if(obj.ipcTransport) obj.ipcTransport._destroy();
+						obj.child.unref();
+						obj.child.kill();
+						delete obj.child;
+						delete obj.ipcTransport;
+					}
 				}
 			}
-			var hasChilds = [];
-			for(var [key,obj] of rwProcessMap){
-				if(key!==obj.child) hasChilds.push(obj.child);
+			for(var key in ['events','ipcTransport','proxyCom','proxy','child','rwProcess']){
+				try{ delete this[key]; }catch(err){}
 			}
-			for(var i=0,l=removedObjects.length; i<l; i++){
-				let obj = removedObjects[i];
-				if(hasChilds.indexOf(obj.child)===-1){
-					if(rwProcessMap.has(obj.child)) rwProcessMap.delete(obj.child);
-					if(obj.ipcTransport) obj.ipcTransport._destroy();
-					obj.child.unref();
-					obj.child.kill();
-					delete obj.child;
-					delete obj.ipcTransport;
-				}
-			}
-		}
-		for(var key in ['events','ipcTransport','proxyCom','proxy','child','rwProcess']){
-			try{ delete this[key]; }catch(err){}
-		}
-		this.setChildReferenced = ()=>{ throw Error("requireWorker client has been destroyed"); };
-		proxyCom.proxyInterfaceGet = function(){ throw Error("requireWorker client has been destroyed, proxy methods are not available"); };
-		this._destroyed = true;
+			this.setChildReferenced = ()=>{
+				var err = Error("requireWorker client has been destroyed");
+				err.code = 'DESTROYED';
+				throw err;
+			};
+			proxyCom.proxyInterfaceGet = function(){
+				var err = Error("requireWorker client has been destroyed, proxy methods are not available");
+				err.code = 'DESTROYED';
+				throw err;
+			};
+			this._destroyed = true;
+		});
 	},
 	setChildReferenced: function(bool){
 		if(bool) this.child.ref();
 		else this.child.unref();
+	},
+	preConfiguredProxy: function(options={}){
+		return this.proxyCom.createMainProxyInterface({ preConfigure:options });
 	}
 };
 
 const rwPreparedProcessMap = new Map();
-exports.prepareProcesses = function(options={ count:1, forkOptions:{} }){
+exports.getPreparedProcessesCount = ()=>{
+	return rwPreparedProcessMap.size;
+};
+exports.prepareProcesses = (options={ count:1, forkOptions:{} })=>{
 	for(var i=0,l=options.count; i<l; i++){
 		var rwPObj = rwCreateProcess(_.omit(options,['count']));
 		rwPObj.preparedProcess = true;
@@ -174,7 +191,7 @@ exports.prepareProcesses = function(options={ count:1, forkOptions:{} }){
 	}
 	return true;
 };
-exports.destroyPrepareProcesses = function(){
+exports.destroyPrepareProcesses = ()=>{
 	for(var [key,obj] of rwPreparedProcessMap){
 		obj.child.unref();
 		obj.child.kill();
@@ -182,7 +199,8 @@ exports.destroyPrepareProcesses = function(){
 	}
 	return true;
 };
-const rwCreateProcess = function(options={ forkOptions:{} }){
+var rwProcessIndex = 0;
+const rwCreateProcess = (options={ forkOptions:{} })=>{
 	var rwPObj = { id:'require-worker:process:'+(++rwProcessIndex)+':'+Date.now() };
 	rwPObj.ipcTransport = ipcTransport.create({ id:rwPObj.id });
 	if(!('forkOptions' in options)) options.forkOptions = {};
@@ -195,9 +213,8 @@ const rwCreateProcess = function(options={ forkOptions:{} }){
 	return rwPObj;
 };
 
-var rwProcessIndex = 0;
 const rwProcessMap = new Map();
-const rwProcess = function(options={}){
+const rwProcess = (options={})=>{
 	var client = options.client;
 	var ownProcess = !!client.options.ownProcess;
 	var shareProcess = client.options.shareProcess;
@@ -306,19 +323,23 @@ const host = exports.requireWorkerHost = function requireWorkerHost({ transport,
 };
 
 host.prototype = {
-	_destroy: function(){
-		if(this._destroyed) return;
-		if(this.proxyCom && this.proxyCom.transport && this.proxyCom.transport.send) this.proxyCom.transport.send('host._destroy');
-		if(hostsMap.has(this.exports) && clientsMap.get(this.exports)===this) clientsMap.delete(this.exports);
-		if(this.file && clientsMap.has(this.file) && clientsMap.get(this.file)===this) clientsMap.delete(this.file);
-		var proxyCom = this.proxyCom;
-		this.events.removeAllListeners();
-		this.proxyCom._destroy();
-		
-		for(var key in ['events','ipcTransport','proxyCom','exports']){
-			try{ delete this[key]; }catch(err){}
-		}
-		this._destroyed = true;
+	_destroy: function(destroyNow){
+		if(this._destroyed || this._destroying) return;
+		this._destroying = true;
+		this.proxyCom.dataHandler._preDestroy();
+		this.proxyCom._preDestroy();
+		if(this.proxyCom && this.proxyCom.transport && this.proxyCom.transport.send) this.proxyCom.transport.send('host._destroy'); // after preDestroy
+		setImmediate(()=>{
+			if(hostsMap.has(this.exports) && clientsMap.get(this.exports)===this) clientsMap.delete(this.exports);
+			if(this.file && clientsMap.has(this.file) && clientsMap.get(this.file)===this) clientsMap.delete(this.file);
+			var proxyCom = this.proxyCom;
+			this.events.removeAllListeners();
+			this.proxyCom._destroy(true);
+			for(var key in ['events','ipcTransport','proxyCom','exports']){
+				try{ delete this[key]; }catch(err){}
+			}
+			this._destroyed = true;
+		});
 	}
 };
 

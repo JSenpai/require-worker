@@ -84,6 +84,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
+## Links
+
+Github Repository: [https://github.com/Unchosen/require-worker][github-url]
+
+NPM Package: [https://npmjs.org/package/require-worker][npm-url]
+
 [github-url]: https://github.com/Unchosen/require-worker
 [github-branch]: https://github.com/Unchosen/require-worker/tree/dev-pre-v1
 [github-releases]: https://github.com/Unchosen/require-worker/releases
