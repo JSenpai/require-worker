@@ -25,6 +25,8 @@ exports.promiseReject = ()=>{
 
 exports.stringData = 'bar';
 
+exports.numberData = 42;
+
 exports.hello = (arg)=>{
 	return 'Hello '+arg+'!';
 };

@@ -622,6 +622,15 @@ describe("Main: require-worker",()=>{
 						done('hasProperty error: '+err,err);
 					});
 				});
+				
+				it("return a specified key ('value') instead of result object via .configure({ returnKey:'value' })",(done)=>{
+					proxy.numberData().configure({ returnKey:'value' }).then((value)=>{
+						expect(value).to.equal(42);
+						done();
+					},(err)=>{
+						done('get error: '+err,err);
+					});
+				});
 
 			});
 			
