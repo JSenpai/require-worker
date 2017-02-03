@@ -191,7 +191,7 @@ exports.prepareProcesses = (options={ count:1, forkOptions:{} })=>{
 	}
 	return true;
 };
-exports.destroyPrepareProcesses = ()=>{
+exports.destroyPreparedProcesses = ()=>{
 	for(var [key,obj] of rwPreparedProcessMap){
 		obj.child.unref();
 		obj.child.kill();

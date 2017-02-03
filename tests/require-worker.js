@@ -38,7 +38,7 @@ describe("Main: require-worker",()=>{
 			expect(requireWorker).to.have.property('requireWorkerClient');
 			expect(requireWorker).to.have.property('requireWorkerHost');
 			expect(requireWorker).to.have.property('prepareProcesses');
-			expect(requireWorker).to.have.property('destroyPrepareProcesses');
+			expect(requireWorker).to.have.property('destroyPreparedProcesses');
 			expect(requireWorker).to.be.a('function');
 			expect(requireWorker.require).to.be.a('function');
 			expect(requireWorker.requireWorkerClient).to.be.a('function');
@@ -650,7 +650,7 @@ describe("Main: require-worker",()=>{
 		});
 		
 		it("destroy remaining prepared processes",(done)=>{
-			var r = requireWorker.destroyPrepareProcesses();
+			var r = requireWorker.destroyPreparedProcesses();
 			expect(r).to.be.true;
 			done();
 		});
