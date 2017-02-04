@@ -44,11 +44,9 @@ Todo. See examples.
 
 View results on [Travis-CI][travis-url], or run tests manually:
 
-Install Mocha globally: `npm install -g mocha`
-
 Install development dependencies for this module: `npm install`
 
-Then run the test: `npm test`
+Then run the test npm script: `npm test`
 
 Since this module spawns child processors, some test results may take a while to complete.
 
