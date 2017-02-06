@@ -1,9 +1,8 @@
 # require-worker - Nodejs Module
 > require with a fork and a promise
 
-<!--[![NPM Version][npm-image]][npm-url]-->
-<!--[![Downloads Stats][npm-downloads]][npm-url]-->
-
+[![NPM Version][npm-image]][npm-url]
+[![Downloads Stats][npm-downloads]][npm-url]
 [![Travis CI][travis-image]][travis-url]
 
 Load a module in a new process, then use promises to interact with it.
