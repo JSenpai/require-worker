@@ -397,29 +397,118 @@ describe("Main: require-worker",()=>{
 		});
 		
 		describe("preConfigure options",()=>{
-			var preConfiguredProxy;
 			
-			it("create preConfiguredProxy",(done)=>{
-				preConfiguredProxy = client.preConfiguredProxy({ resolveError:true });
-				done();
-			});
-			
-			it("preConfiguredProxy instance should be different from client.proxy",()=>{
-				expect(preConfiguredProxy).to.not.equal(client.proxy);
-			});
-			
-			it("promise should resolve instead of rejecting via client.preConfiguredProxy({ resolveError:true }), and no direct configure on promise",(done)=>{
-				preConfiguredProxy.somethingThatDoesNotExist1().then(({ value, error })=>{
-					if(error){
-						expect(error).to.have.property('code');
-						expect(error.code).to.equal('PROPERTY_NOT_FOUND');
-						done();
-					} else {
-						done("resolveError:true preConfigure action resolved with a value when it should not have. value: "+value);
-					}
-				},(err)=>{
-					done("resolveError:true preConfigure action errored when it should not have: "+err,err);
+			describe("preConfiguredProxy via client.preConfiguredProxy(options)",()=>{
+				var preConfiguredProxy;
+				
+				it("create preConfiguredProxy",(done)=>{
+					preConfiguredProxy = client.preConfiguredProxy({ resolveError:true });
+					done();
 				});
+				
+				it("preConfiguredProxy instance should be different from client.proxy",()=>{
+					expect(preConfiguredProxy).to.not.equal(proxy);
+				});
+				
+				it("promise should resolve instead of rejecting via { resolveError:true }, and no direct configure on promise",(done)=>{
+					preConfiguredProxy.somethingThatDoesNotExist1().then(({ value, error })=>{
+						if(error){
+							expect(error).to.have.property('code');
+							expect(error.code).to.equal('PROPERTY_NOT_FOUND');
+							done();
+						} else {
+							done("resolveError:true preConfigure action resolved with a value when it should not have. value: "+value);
+						}
+					},(err)=>{
+						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
+					});
+				});
+				
+			});
+			
+			describe("preConfiguredProxy via requireWorker.preConfiguredProxy(target,options), target = proxy",()=>{
+				var preConfiguredProxy;
+				
+				it("create preConfiguredProxy",(done)=>{
+					preConfiguredProxy = requireWorker.preConfiguredProxy(proxy,{ resolveError:true });
+					done();
+				});
+				
+				it("preConfiguredProxy instance should be different from client.proxy",()=>{
+					expect(preConfiguredProxy).to.not.equal(proxy);
+				});
+				
+				it("promise should resolve instead of rejecting via { resolveError:true }, and no direct configure on promise",(done)=>{
+					preConfiguredProxy.somethingThatDoesNotExist2().then(({ value, error })=>{
+						if(error){
+							expect(error).to.have.property('code');
+							expect(error.code).to.equal('PROPERTY_NOT_FOUND');
+							done();
+						} else {
+							done("resolveError:true preConfigure action resolved with a value when it should not have. value: "+value);
+						}
+					},(err)=>{
+						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
+					});
+				});
+				
+			});
+			
+			describe("preConfiguredProxy via requireWorker.preConfiguredProxy(target,options), target = proxy promise",()=>{
+				var preConfiguredProxy, promise;
+				
+				it("create preConfiguredProxy",(done)=>{
+					promise = proxy.numberData();
+					preConfiguredProxy = requireWorker.preConfiguredProxy(promise,{ resolveError:true });
+					done();
+				});
+				
+				it("preConfiguredProxy instance should be different from client.proxy",()=>{
+					expect(preConfiguredProxy).to.not.equal(proxy);
+				});
+				
+				it("promise should resolve instead of rejecting via { resolveError:true }, and no direct configure on promise",(done)=>{
+					preConfiguredProxy.somethingThatDoesNotExist3().then(({ value, error })=>{
+						if(error){
+							expect(error).to.have.property('code');
+							expect(error.code).to.equal('PROPERTY_NOT_FOUND');
+							done();
+						} else {
+							done("resolveError:true preConfigure action resolved with a value when it should not have. value: "+value);
+						}
+					},(err)=>{
+						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
+					});
+				});
+				
+			});
+			
+			describe("preConfiguredProxy via proxy.constructor.preConfiguredProxy(options)",()=>{
+				var preConfiguredProxy;
+				
+				it("create preConfiguredProxy",(done)=>{
+					preConfiguredProxy = proxy.constructor.preConfiguredProxy({ resolveError:true });
+					done();
+				});
+				
+				it("preConfiguredProxy instance should be different from client.proxy",()=>{
+					expect(preConfiguredProxy).to.not.equal(proxy);
+				});
+				
+				it("promise should resolve instead of rejecting via { resolveError:true }, and no direct configure on promise",(done)=>{
+					preConfiguredProxy.somethingThatDoesNotExist4().then(({ value, error })=>{
+						if(error){
+							expect(error).to.have.property('code');
+							expect(error.code).to.equal('PROPERTY_NOT_FOUND');
+							done();
+						} else {
+							done("resolveError:true preConfigure action resolved with a value when it should not have. value: "+value);
+						}
+					},(err)=>{
+						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
+					});
+				});
+				
 			});
 			
 		});
