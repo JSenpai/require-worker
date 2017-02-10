@@ -10,6 +10,9 @@ const proxyCom = require(path.resolve(__dirname,'./lib/proxy-communication'));
 const ipcTransport = require(path.resolve(__dirname,'./lib/ipc-transport'));
 
 module.exports = exports = (target)=>{
+	if(_.isObject(target) && 'constructor' in target && 'client' in target.constructor && target.constructor.client instanceof exports.requireWorkerClient){
+		return target.constructor.client;
+	}
 	if(_.isString(target))try{ target = require.resolve(target); }catch(err){}
 	if(hostsMap.has(target)) return hostsMap.get(target);
 	if(clientsMap.size===0 && hostsMap.size>0) throw Error("first argument must be a valid require-worker host or file path");
@@ -41,6 +44,7 @@ const client = exports.requireWorkerClient = function requireWorkerClient(file,o
 	if(!_.isString(file)) throw Error("first argument must be a string (require path)");
 	if(!_.isObject(options)) throw Error("second argument must be an object (options) or undefined");
 	var self = this;
+	self.requireWorker = exports;
 	self.id = 'require-worker:'+(++clientIndex)+':'+_.uniqueId()+':'+Date.now();//+':'+file;
 	self.options = options;
 	var hostOptions = {
@@ -89,7 +93,8 @@ const client = exports.requireWorkerClient = function requireWorkerClient(file,o
 	try{ clientsMap.set(hostOptions.file,self); }catch(err){}
 	self.proxyCom = proxyCom.create({
 		transport: { type:'ipcTransport', instance:self.ipcTransport },
-		requireWorkerClient: self
+		requireWorkerClient: self,
+		requireWorker: exports
 	});
 	self.proxyCom.client = self;
 	self.proxyCom.transport.once('requireState',({message,stack}={})=>{
@@ -177,6 +182,39 @@ client.prototype = {
 	preConfiguredProxy: function(options={}){
 		return this.proxyCom.createMainProxyInterface({ preConfigure:options });
 	}
+};
+
+exports.preConfiguredProxy = (target,options)=>{
+	var interfaceObj = null, client = null;
+	var targetIsProxy = false;
+	if(_.isObject(target) && 'constructor' in target && 'client' in target.constructor && target.constructor.client instanceof exports.requireWorkerClient) targetIsProxy = true;
+	if(!targetIsProxy && _.isObject(target) && 'interfaceObj' in target && 'client' in target){
+		interfaceObj = target.interfaceObj;
+		client = target.client;
+	} else {
+		var targetIsPromise = !targetIsProxy && _.isPromise(target);
+		for(var [key,val] of clientsMap){
+			if('proxyCom' in val && 'proxyMap' in val.proxyCom){
+				if(val.proxyCom.proxyMap.has(target)){
+					interfaceObj = val.proxyCom.proxyMap.get(target);
+					client = val;
+					break;
+				} else if(targetIsPromise) {
+					for(var [key2,val2] of val.proxyCom.proxyMap){
+						if('promiseMap' in val2){
+							if(val2.promiseMap.has(target)){ interfaceObj = val2; break; }
+						}
+					}
+					if(interfaceObj){
+						client = val;
+						break;
+					}
+				}
+			}
+		}
+	}
+	if(!interfaceObj || !client) throw Error("Target not found");
+	return client.proxyCom.createMainProxyInterface(_.deepExtend(_.deepExtend({},interfaceObj.options),{ preConfigure:options }));
 };
 
 const rwPreparedProcessMap = new Map();
