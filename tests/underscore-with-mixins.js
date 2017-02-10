@@ -34,22 +34,16 @@ describe("Lib: underscore-with-mixins",()=>{
 		});
 	});
 	
-	it("should have mixin properties",()=>{
+	it("mixin #isPromise",()=>{
 		expect(_).to.have.ownProperty('isPromise');
-		expect(_).to.have.ownProperty('isConstructed');
-		expect(_).to.have.ownProperty('isStream');
-		expect(_).to.have.ownProperty('isEventEmitter');
 		expect(_.isPromise).to.be.a('function');
-		expect(_.isConstructed).to.be.a('function');
-		expect(_.isStream).to.be.a('function');
-		expect(_.isEventEmitter).to.be.a('function');
-	});
-	
-	it("should have working mixin methods",()=>{
-		// isPromise
 		expect(Promise.resolve()).to.satisfy(_.isPromise.bind(_));
 		expect('test').to.not.satisfy(_.isPromise.bind(_));
-		// isConstructed
+	});
+	
+	it("mixin #isConstructed",()=>{
+		expect(_).to.have.ownProperty('isConstructed');
+		expect(_.isConstructed).to.be.a('function');
 		expect(new (function(){})).to.satisfy(_.isConstructed.bind(_));
 		expect(function(){}).to.not.satisfy(_.isConstructed.bind(_));
 		var fn = function(){};
@@ -57,15 +51,40 @@ describe("Lib: underscore-with-mixins",()=>{
 		expect(new fn()).to.satisfy(_.isConstructed.bind(_));
 		expect(fn).to.not.satisfy(_.isConstructed.bind(_));
 		expect(_.isConstructed(new (function(){}),fn)).to.be.false;
-		// isEventEmitter
+	});
+	
+	it("mixin #isEventEmitter",()=>{
+		expect(_).to.have.ownProperty('isEventEmitter');
+		expect(_.isEventEmitter).to.be.a('function');
 		var events = new eventEmitter();
 		expect(events).to.satisfy(_.isEventEmitter.bind(_));
 		expect('test').to.not.satisfy(_.isEventEmitter.bind(_));
-		// isStream
+	});
+	
+	it("mixin #isStream",()=>{
+		expect(_).to.have.ownProperty('isStream');
+		expect(_.isStream).to.be.a('function');
 		var streamAPI = require('stream');
 		var stream = new streamAPI.Readable();
 		expect(stream).to.satisfy(_.isStream.bind(_));
 		expect('test').to.not.satisfy(_.isStream.bind(_));
+	});
+	
+	it("mixin #deepExtend",()=>{
+		expect(_).to.have.ownProperty('deepExtend');
+		expect(_.deepExtend).to.be.a('function');
+		var obj1 = { a:1, b:2, c:3, d:{ e:4 } };
+		var obj2 = { foo:'bar', answer:42, sub:{ hello:'world' } };
+		var testobj1 = _.extend({},obj1,obj2);
+		var testobj1str = JSON.stringify(testobj1);
+		var testobj2 = _.deepExtend({},obj1,obj2);
+		var testobj2str = JSON.stringify(testobj2);
+		expect(testobj1str).to.equal(testobj2str);
+		obj1.d.f = 5;
+		obj2.sub.hello = 'friend';
+		//expect(JSON.stringify(testobj1)).to.not.equal(testobj1str);
+		expect(JSON.stringify(testobj2)).to.not.equal(JSON.stringify(testobj1));
+		expect(JSON.stringify(testobj2)).to.equal(testobj2str);
 	});
 	
 	it("should have disabled methods",()=>{
