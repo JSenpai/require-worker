@@ -65,7 +65,7 @@ describe("Main: require-worker",()=>{
 			}
 		});
 		
-		it("new client should have used a prepared process",(done)=>{
+		if(prepareProcessCount>0) it("new client should have used a prepared process",(done)=>{
 			expect(requireWorker.getPreparedProcessesCount()).to.equal(preparedProcessesCount-1);
 			done();
 		});
