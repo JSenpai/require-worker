@@ -23,6 +23,16 @@ exports.promiseReject = ()=>{
 	return Promise.reject();
 };
 
+exports.undefinedData = void 0;
+
+exports.nullData = null;
+
+exports.regexNumberOnly = /^[0-9]{1,}(\.[0-9]{1,}){0,1}$/;
+
+exports.dateData = new Date("2000-01-01T00:00:00.000Z");
+
+exports.NaNData = global.NaN;
+
 exports.stringData = 'bar';
 
 exports.numberData = 42;

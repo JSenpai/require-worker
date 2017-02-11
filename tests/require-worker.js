@@ -725,7 +725,74 @@ describe("Main: require-worker",()=>{
 			
 		});
 		
+		describe("Null data-type",()=>{
+			
+			it("get null",(done)=>{
+				proxy.nullData().then(({value})=>{
+					expect(value).to.be.null;
+					done();
+				},(err)=>{
+					done('get error: '+err,err);
+				});
+			});
+			
+		});
 		
+		describe("Undefined data-type",()=>{
+			
+			it("get undefined",(done)=>{
+				proxy.undefinedData().then(({value})=>{
+					expect(value).to.be.undefined;
+					done();
+				},(err)=>{
+					done('get error: '+err,err);
+				});
+			});
+			
+		});
+		
+		describe("Date data-type",()=>{
+			
+			it("get date, date matches data",(done)=>{
+				proxy.dateData().then(({value})=>{
+					expect(value).to.satisfy(_.isDate);
+					expect(value.toISOString()).to.equal("2000-01-01T00:00:00.000Z");
+					done();
+				},(err)=>{
+					done('get error: '+err,err);
+				});
+			});
+			
+		});
+		
+		describe("Regex data-type",()=>{
+			
+			it("get regex, match regex on valid string",(done)=>{
+				proxy.regexNumberOnly().then(({value})=>{
+					expect(value).to.satisfy(_.isRegExp);
+					expect('42.0'.match(value)).to.be.ok;
+					done();
+				},(err)=>{
+					done('get error: '+err,err);
+				});
+			});
+			
+		});
+		
+		describe("NaN data-type",()=>{
+			
+			it("get NaN",(done)=>{
+				proxy.NaNData().then(({value})=>{
+					expect(value).to.be.NaN;
+					expect(value).to.satisfy(global.isNaN);
+					expect(value).to.satisfy(_.isNaN);
+					done();
+				},(err)=>{
+					done('get error: '+err,err);
+				});
+			});
+			
+		});
 		
 		// promise replies not yet implemented
 		//it("set timeout via .configure({ timeout:1 })",(done)=>{
