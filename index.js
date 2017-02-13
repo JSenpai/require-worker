@@ -24,6 +24,7 @@ var requireWorkerObj = { exports, __filename, coreClient, coreHost, coreProcessM
 
 coreClient.setRequireWorker(requireWorkerObj);
 exports.coreClient = coreClient;
+exports.preConfiguredProxy = coreClient.preConfiguredProxy;
 
 coreHost.setRequireWorker(requireWorkerObj);
 exports.coreHost = coreHost;
@@ -51,39 +52,6 @@ requireWorkerObj.getStackFiles = function getStackFiles(){
 		result.push(file);
 	}
 	return result; 
-};
-
-exports.preConfiguredProxy = (target,options)=>{
-	var interfaceObj = null, client = null;
-	var targetIsProxy = false;
-	if(_.isObject(target) && 'constructor' in target && 'client' in target.constructor && target.constructor.client instanceof coreClient.requireWorkerClient) targetIsProxy = true;
-	if(!targetIsProxy && _.isObject(target) && 'interfaceObj' in target && 'client' in target){
-		interfaceObj = target.interfaceObj;
-		client = target.client;
-	} else {
-		var targetIsPromise = !targetIsProxy && _.isPromise(target);
-		for(var [key,val] of coreClient.clientsMap){
-			if('proxyCom' in val && 'proxyMap' in val.proxyCom){
-				if(val.proxyCom.proxyMap.has(target)){
-					interfaceObj = val.proxyCom.proxyMap.get(target);
-					client = val;
-					break;
-				} else if(targetIsPromise) {
-					for(var [key2,val2] of val.proxyCom.proxyMap){
-						if('promiseMap' in val2){
-							if(val2.promiseMap.has(target)){ interfaceObj = val2; break; }
-						}
-					}
-					if(interfaceObj){
-						client = val;
-						break;
-					}
-				}
-			}
-		}
-	}
-	if(!interfaceObj || !client) throw Error("Target not found");
-	return client.proxyCom.createMainProxyInterface(_.deepExtend(_.deepExtend({},interfaceObj.options),{ preConfigure:options }));
 };
 
 const checkNewProcess = ()=>{
