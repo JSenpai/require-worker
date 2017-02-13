@@ -187,7 +187,7 @@ describe("Main: require-worker",()=>{
 					done();
 				},(err)=>{
 					done("promise action failed when it should not have");
-				});
+				}).catch(done);
 			});
 			
 			it("have promise action called after destroy, and reject with destroy error",(done)=>{
@@ -209,7 +209,7 @@ describe("Main: require-worker",()=>{
 						expect(err).to.have.property('code');
 						expect(err.code).to.equal('DESTROYED');
 						done();
-					});
+					}).catch(done);
 				}
 			});
 			
@@ -225,7 +225,7 @@ describe("Main: require-worker",()=>{
 					expect(err).to.have.property('code');
 					expect(err.code).to.equal('DESTROYED');
 					done();
-				});
+				}).catch(done);
 			});
 			
 		});
@@ -259,7 +259,7 @@ describe("Main: require-worker",()=>{
 					expect(err).to.have.property('code');
 					expect(err.code).to.equal('INVALID_TARGET');
 					done();
-				});
+				}).catch(done);
 			});
 			
 			it("new proxy() should fail with 'INVALID_TARGET' (host export is an object)",(done)=>{
@@ -269,7 +269,7 @@ describe("Main: require-worker",()=>{
 					expect(err).to.have.property('code');
 					expect(err.code).to.equal('INVALID_TARGET');
 					done();
-				});
+				}).catch(done);
 			});
 			
 		});
@@ -325,7 +325,7 @@ describe("Main: require-worker",()=>{
 					done();
 				},(err)=>{
 					done("proxy.stringData error: "+err,err);
-				});
+				}).catch(done);
 			});
 			
 			it("check if promise rejects, with non-existant target property",(done)=>{
@@ -335,7 +335,7 @@ describe("Main: require-worker",()=>{
 					expect(err).to.have.property('code');
 					expect(err.code).to.equal('PROPERTY_NOT_FOUND');
 					done();
-				});
+				}).catch(done);
 			});
 			
 			it("result function can be called more than once, returning a new promise each time",()=>{
@@ -391,7 +391,7 @@ describe("Main: require-worker",()=>{
 					}
 				},(err)=>{
 					done("resolveError:true configure action errored when it should not have: "+err,err);
-				});
+				}).catch(done);
 			});
 			
 		});
@@ -421,7 +421,7 @@ describe("Main: require-worker",()=>{
 						}
 					},(err)=>{
 						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
-					});
+					}).catch(done);
 				});
 				
 			});
@@ -449,7 +449,7 @@ describe("Main: require-worker",()=>{
 						}
 					},(err)=>{
 						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
-					});
+					}).catch(done);
 				});
 				
 			});
@@ -478,7 +478,7 @@ describe("Main: require-worker",()=>{
 						}
 					},(err)=>{
 						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
-					});
+					}).catch(done);
 				});
 				
 			});
@@ -506,7 +506,7 @@ describe("Main: require-worker",()=>{
 						}
 					},(err)=>{
 						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
-					});
+					}).catch(done);
 				});
 				
 			});
@@ -523,7 +523,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done('get error: '+err,err);
-					});
+					}).catch(done);
 				});
 
 				it("set existing string via new operator",(done)=>{
@@ -537,7 +537,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done('get error: '+err,err);
-					});
+					}).catch(done);
 				});
 
 				it("set new string via new operator",(done)=>{
@@ -551,7 +551,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done('get error: '+err,err);
-					});
+					}).catch(done);
 				});
 
 			});
@@ -564,7 +564,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done(err,err);
-					});
+					}).catch(done);
 				});
 
 				it("check if property does not exists via .configure({ hasProperty:true })",(done)=>{
@@ -573,7 +573,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done(err,err);
-					});
+					}).catch(done);
 				});
 
 				it("check if property exists via .configure({ hasOwnProperty:true })",(done)=>{
@@ -582,7 +582,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done(err,err);
-					});
+					}).catch(done);
 				});
 
 				it("check if property does not exists via .configure({ hasOwnProperty:true })",(done)=>{
@@ -591,7 +591,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done(err,err);
-					});
+					}).catch(done);
 				});
 
 				it("check if prototype property exists via .configure({ hasProperty:true })",(done)=>{
@@ -600,7 +600,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done(err,err);
-					});
+					}).catch(done);
 				});
 
 				it("check if prototype property returns false via .configure({ hasOwnProperty:true })",(done)=>{
@@ -609,7 +609,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done(err,err);
-					});
+					}).catch(done);
 				});
 
 				it("set exiting property (as string) via .configure({ newOperator:true })",(done)=>{
@@ -623,7 +623,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done('get error: '+err,err);
-					});
+					}).catch(done);
 				});
 
 				it("set new property (as string) via .configure({ newOperator:true })",(done)=>{
@@ -637,7 +637,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done('get error: '+err,err);
-					});
+					}).catch(done);
 				});
 
 				it("set exiting property (as string) via .configure({ setProperty:true })",(done)=>{
@@ -651,7 +651,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done('get error: '+err,err);
-					});
+					}).catch(done);
 				});
 
 				it("set new property (as string) via .configure({ setProperty:true })",(done)=>{
@@ -665,7 +665,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done('get error: '+err,err);
-					});
+					}).catch(done);
 				});
 
 				it("delete property via .configure({ deleteProperty:true })",(done)=>{
@@ -690,7 +690,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done('hasProperty error: '+err,err);
-					});
+					}).catch(done);
 				});
 
 				it("delete property that does not exist via .configure({ deleteProperty:true })",(done)=>{
@@ -709,7 +709,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done('hasProperty error: '+err,err);
-					});
+					}).catch(done);
 				});
 				
 				it("return a specified key ('value') instead of result object via .configure({ returnKey:'value' })",(done)=>{
@@ -718,7 +718,7 @@ describe("Main: require-worker",()=>{
 						done();
 					},(err)=>{
 						done('get error: '+err,err);
-					});
+					}).catch(done);
 				});
 
 			});
@@ -733,7 +733,7 @@ describe("Main: require-worker",()=>{
 					done();
 				},(err)=>{
 					done('get error: '+err,err);
-				});
+				}).catch(done);
 			});
 			
 		});
@@ -746,7 +746,7 @@ describe("Main: require-worker",()=>{
 					done();
 				},(err)=>{
 					done('get error: '+err,err);
-				});
+				}).catch(done);
 			});
 			
 		});
@@ -760,7 +760,7 @@ describe("Main: require-worker",()=>{
 					done();
 				},(err)=>{
 					done('get error: '+err,err);
-				});
+				}).catch(done);
 			});
 			
 		});
@@ -774,7 +774,7 @@ describe("Main: require-worker",()=>{
 					done();
 				},(err)=>{
 					done('get error: '+err,err);
-				});
+				}).catch(done);
 			});
 			
 		});
@@ -789,7 +789,7 @@ describe("Main: require-worker",()=>{
 					done();
 				},(err)=>{
 					done('get error: '+err,err);
-				});
+				}).catch(done);
 			});
 			
 		});
@@ -802,7 +802,7 @@ describe("Main: require-worker",()=>{
 		//		expect(err).to.have.property('code');
 		//		expect(err.code).to.equal('TIMEOUT');
 		//		done();
-		//	});
+		//	}).catch(done);
 		//});
 		
 	});
