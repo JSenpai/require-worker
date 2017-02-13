@@ -37,7 +37,8 @@ describe("Main: require-worker",()=>{
 			expect(requireWorker).to.have.property('require');
 			expect(requireWorker).to.have.property('coreClient');
 			expect(requireWorker.coreClient).to.have.property('requireWorkerClient');
-			expect(requireWorker).to.have.property('requireWorkerHost');
+			expect(requireWorker).to.have.property('coreHost');
+			expect(requireWorker.coreHost).to.have.property('requireWorkerHost');
 			expect(requireWorker).to.have.property('prepareProcesses');
 			expect(requireWorker).to.have.property('destroyPreparedProcesses');
 			expect(requireWorker).to.be.a('function');

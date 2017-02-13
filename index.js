@@ -9,21 +9,24 @@ const _ = require(path.resolve(__dirname,'./lib/underscore-with-mixins'));
 const proxyCom = require(path.resolve(__dirname,'./lib/proxy-communication'));
 const ipcTransport = require(path.resolve(__dirname,'./lib/ipc-transport'));
 const coreClient = require(path.resolve(__dirname,'./lib/core-client'));
+const coreHost = require(path.resolve(__dirname,'./lib/core-host'));
 
 module.exports = exports = (target)=>{
 	if(_.isObject(target) && 'constructor' in target && 'client' in target.constructor && target.constructor.client instanceof coreClient.requireWorkerClient){
 		return target.constructor.client;
 	}
 	if(_.isString(target))try{ target = require.resolve(target); }catch(err){}
-	if(hostsMap.has(target)) return hostsMap.get(target);
-	if(coreClient.clientsMap.size===0 && hostsMap.size>0) throw Error("first argument must be a valid require-worker host or file path");
+	if(coreHost.hostsMap.has(target)) return coreHost.hostsMap.get(target);
+	if(coreClient.clientsMap.size===0 && coreHost.hostsMap.size>0) throw Error("first argument must be a valid require-worker host or file path");
 	if(!coreClient.clientsMap.has(target)) throw Error("first argument must be a valid require-worker client or file path");
 	return coreClient.clientsMap.get(target);
 };
 
-var requireWorkerObj = { exports, coreClient };
+var requireWorkerObj = { exports, coreClient, coreHost };
 coreClient.setRequireWorker(requireWorkerObj);
 exports.coreClient = coreClient;
+coreHost.setRequireWorker(requireWorkerObj);
+exports.coreHost = coreHost;
 
 exports.require = (path,options)=>new coreClient.requireWorkerClient(path,options);
 
@@ -176,68 +179,9 @@ const checkNewProcess = ()=>{
 			transportEvents.send('processReady!');
 		});
 		transportEvents.on('requireHost',(hostOptions)=>{
-			new host(hostOptions);
+			new coreHost.requireWorkerHost(hostOptions);
 		});
 		transportEvents.send('processReady!');
-	}
-};
-
-const hostsMap = new Map();
-const host = exports.requireWorkerHost = function requireWorkerHost({ transport, ipcTransportID, file }){
-	var self = this;
-	if(transport!=='ipcTransport') throw Error("Invalid transport, only ipcTransport is currently implemented");
-	self.events = new eventEmitter();
-	self.ipcTransport = ipcTransport.create({
-		id: ipcTransportID,
-		parent: true
-	});
-	self.proxyCom = proxyCom.create({
-		transport: { type:'ipcTransport', instance:self.ipcTransport },
-		requireWorkerHost: self
-	});
-	var requireError;
-	self.proxyCom.transport.once('client._destroy',()=>{
-		this._destroy();
-	});
-	self.proxyCom.connectTransportHost(()=>{
-		if(requireError){
-			self.proxyCom.transport.send("requireState",_.pick(requireError,['message','stack']));
-		} else {
-			self.proxyCom.transport.send("requireState");
-			self.proxyCom.setProxyTarget(self.exports);
-		}
-	});
-	try{
-		self.file = require.resolve(file);
-		hostsMap.set(require.resolve(file),self);
-	}catch(err){}
-	try{
-		self.exports = require(file);
-		hostsMap.set(self.exports,self);
-	}catch(err){
-		requireError = err;
-	}
-	return this;
-};
-
-host.prototype = {
-	_destroy: function(){
-		if(this._destroyed || this._destroying) return;
-		this._destroying = true;
-		this.proxyCom.dataHandler._preDestroy();
-		this.proxyCom._preDestroy();
-		if(this.proxyCom && this.proxyCom.transport && this.proxyCom.transport.send) this.proxyCom.transport.send('host._destroy'); // after preDestroy
-		setImmediate(()=>{
-			if(hostsMap.has(this.exports) && coreClient.clientsMap.get(this.exports)===this) coreClient.clientsMap.delete(this.exports);
-			if(this.file && coreClient.clientsMap.has(this.file) && coreClient.clientsMap.get(this.file)===this) coreClient.clientsMap.delete(this.file);
-			var proxyCom = this.proxyCom;
-			this.events.removeAllListeners();
-			this.proxyCom._destroy(true);
-			for(var key in ['events','ipcTransport','proxyCom','exports']){
-				try{ delete this[key]; }catch(err){}
-			}
-			this._destroyed = true;
-		});
 	}
 };
 
