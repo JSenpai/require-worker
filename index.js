@@ -122,7 +122,7 @@ const client = exports.requireWorkerClient = function requireWorkerClient(file,o
 };
 
 client.prototype = {
-	_destroy: function(destroyNow){
+	_destroy: function(){
 		if(this._destroyed || this._destroying) return;
 		this._destroying = true;
 		this.proxyCom.dataHandler._preDestroy();
@@ -361,7 +361,7 @@ const host = exports.requireWorkerHost = function requireWorkerHost({ transport,
 };
 
 host.prototype = {
-	_destroy: function(destroyNow){
+	_destroy: function(){
 		if(this._destroyed || this._destroying) return;
 		this._destroying = true;
 		this.proxyCom.dataHandler._preDestroy();
