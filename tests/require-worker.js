@@ -35,14 +35,13 @@ describe("Main: require-worker",()=>{
 
 		it("should have properties on requireWorker",(done)=>{
 			expect(requireWorker).to.have.property('require');
-			expect(requireWorker).to.have.property('requireWorkerClient');
+			expect(requireWorker).to.have.property('coreClient');
+			expect(requireWorker.coreClient).to.have.property('requireWorkerClient');
 			expect(requireWorker).to.have.property('requireWorkerHost');
 			expect(requireWorker).to.have.property('prepareProcesses');
 			expect(requireWorker).to.have.property('destroyPreparedProcesses');
 			expect(requireWorker).to.be.a('function');
 			expect(requireWorker.require).to.be.a('function');
-			expect(requireWorker.requireWorkerClient).to.be.a('function');
-			expect(requireWorker.requireWorkerHost).to.be.a('function');
 			done();
 		});
 		
@@ -51,7 +50,7 @@ describe("Main: require-worker",()=>{
 			preparedProcessesCount = requireWorker.getPreparedProcessesCount();
 			try{
 				var client = firstClient = requireWorker.require(testModuleFile,{ returnClient:true }); // New Client
-				expect(client).to.be.instanceof(requireWorker.requireWorkerClient);
+				expect(client).to.be.instanceof(requireWorker.coreClient.requireWorkerClient);
 				if(!client.events && client._destroyed) return done("requireWorker client has been destroyed");
 				expect(client).to.have.property('events');
 				client.events.once('error',(err)=>{
@@ -73,7 +72,7 @@ describe("Main: require-worker",()=>{
 		it("should fail to require non-existant module",(done)=>{
 			try{
 				var client = requireWorker.require('./something.that.does.not.exist.js',{ returnClient:true }); // New Client
-				expect(client).to.be.instanceof(requireWorker.requireWorkerClient);
+				expect(client).to.be.instanceof(requireWorker.coreClient.requireWorkerClient);
 				if(!client.events && client._destroyed) return done();
 				expect(client).to.have.property('events');
 				client.events.once('error',(err)=>{
@@ -229,12 +228,7 @@ describe("Main: require-worker",()=>{
 			});
 			
 		});
-
-		//it("destroy existing clients, with 100ms post-delay",(done)=>{
-		//	for(var [key,client] of requireWorker.clientsMap) client._destroy();
-		//	setTimeout(done,100);
-		//});
-
+		
 	});
 	
 	describe("proxy actions on main interface (target = host export)",()=>{
@@ -895,7 +889,7 @@ describe("Main: require-worker",()=>{
 	describe("destroy clients and processes",()=>{
 		
 		it("destroy existing clients",(done)=>{
-			for(var [key,client] of requireWorker.clientsMap) client._destroy();
+			for(var [key,client] of requireWorker.coreClient.clientsMap) client._destroy();
 			done();
 		});
 		
