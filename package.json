@@ -1,6 +1,6 @@
 {
   "name": "require-worker",
-  "version": "1.0.0-1",
+  "version": "1.0.0-2",
   "description": "require with a fork and a promise",
   "main": "index.js",
   "directories": {
