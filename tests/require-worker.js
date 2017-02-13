@@ -841,6 +841,57 @@ describe("Main: require-worker",()=>{
 		
 	});
 	
+	describe("require NodeJS modules",()=>{
+		
+		describe("#os",()=>{
+			var proxyOS, localOS = require('os');
+			
+			it("require",(done)=>{
+				proxyOS = requireWorker.require('os');
+				done();
+			});
+			
+			it("#platform()",(done)=>{
+				proxyOS.platform().then(({value})=>{
+					expect(value).to.equal(localOS.platform());
+					done();
+				},(err)=>{
+					done("promise action failed when it should not have: "+err);
+				}).catch(done);
+			});
+			
+			it("#userInfo()",(done)=>{
+				proxyOS.userInfo().then(({value})=>{
+					expect(value).to.deep.equal(localOS.userInfo());
+					done();
+				},(err)=>{
+					done("promise action failed when it should not have: "+err);
+				}).catch(done);
+			});
+			
+		});
+		
+		describe("#util",()=>{
+			var proxyUtil, localUtil = require('util');
+			
+			it("require",(done)=>{
+				proxyUtil = requireWorker.require('util');
+				done();
+			});
+			
+			it("#format(...)",(done)=>{
+				proxyUtil.format('%s:%s','foo','bar','baz').then(({value})=>{
+					expect(value).to.equal(localUtil.format('%s:%s','foo','bar','baz'));
+					done();
+				},(err)=>{
+					done("promise action failed when it should not have: "+err);
+				}).catch(done);
+			});
+			
+		});
+		
+	});
+	
 	describe("destroy clients and processes",()=>{
 		
 		it("destroy existing clients",(done)=>{
