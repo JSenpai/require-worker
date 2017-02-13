@@ -55,13 +55,13 @@ describe("Main: require-worker",()=>{
 				if(!client.events && client._destroyed) return done("requireWorker client has been destroyed");
 				expect(client).to.have.property('events');
 				client.events.once('error',(err)=>{
-					done("requireWorker client emitted 'error' when it should not have: "+err.message,err);
+					done("requireWorker client emitted 'error' when it should not have: "+err);
 				});
 				client.events.once('requireSuccess',()=>{
 					done();
 				});
 			}catch(err){
-				done("requireWorker client constructor threw an error when it should not have:",err);
+				done("requireWorker client constructor threw an error when it should not have: "+err);
 			}
 		});
 		
@@ -85,7 +85,7 @@ describe("Main: require-worker",()=>{
 					done("requireWorker client emitted 'requireSuccess' when it should not have");
 				});
 			}catch(err){
-				done("requireWorker client constructor threw an error when it should not have:",err);
+				done("requireWorker client constructor threw an error when it should not have: "+err);
 			}
 		});
 		
@@ -324,7 +324,7 @@ describe("Main: require-worker",()=>{
 				b.then(({value})=>{
 					done();
 				},(err)=>{
-					done("proxy.stringData error: "+err,err);
+					done("proxy.stringData error: "+err);
 				}).catch(done);
 			});
 			
@@ -390,7 +390,7 @@ describe("Main: require-worker",()=>{
 						done("resolveError:true configure action resolved with a value when it should not have. value: "+value);
 					}
 				},(err)=>{
-					done("resolveError:true configure action errored when it should not have: "+err,err);
+					done("resolveError:true configure action errored when it should not have: "+err);
 				}).catch(done);
 			});
 			
@@ -420,7 +420,7 @@ describe("Main: require-worker",()=>{
 							done("resolveError:true preConfigure action resolved with a value when it should not have. value: "+value);
 						}
 					},(err)=>{
-						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
+						done("resolveError:true preConfigure action errored when it should not have: "+err);
 					}).catch(done);
 				});
 				
@@ -448,7 +448,7 @@ describe("Main: require-worker",()=>{
 							done("resolveError:true preConfigure action resolved with a value when it should not have. value: "+value);
 						}
 					},(err)=>{
-						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
+						done("resolveError:true preConfigure action errored when it should not have: "+err);
 					}).catch(done);
 				});
 				
@@ -477,7 +477,7 @@ describe("Main: require-worker",()=>{
 							done("resolveError:true preConfigure action resolved with a value when it should not have. value: "+value);
 						}
 					},(err)=>{
-						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
+						done("resolveError:true preConfigure action errored when it should not have: "+err);
 					}).catch(done);
 				});
 				
@@ -505,7 +505,7 @@ describe("Main: require-worker",()=>{
 							done("resolveError:true preConfigure action resolved with a value when it should not have. value: "+value);
 						}
 					},(err)=>{
-						done("resolveError:true preConfigure action errored when it should not have: "+err,err);
+						done("resolveError:true preConfigure action errored when it should not have: "+err);
 					}).catch(done);
 				});
 				
@@ -522,7 +522,7 @@ describe("Main: require-worker",()=>{
 						expect(value).to.equal('bar');
 						done();
 					},(err)=>{
-						done('get error: '+err,err);
+						done('get error: '+err);
 					}).catch(done);
 				});
 
@@ -531,12 +531,12 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.true;
 						return proxy.stringData();
 					},(err)=>{
-						done('set error: '+err,err);
+						done('set error: '+err);
 					}).then(({value})=>{
 						expect(value).to.equal('abc');
 						done();
 					},(err)=>{
-						done('get error: '+err,err);
+						done('get error: '+err);
 					}).catch(done);
 				});
 
@@ -545,12 +545,12 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.true;
 						return proxy.stringData2();
 					},(err)=>{
-						done('set error: '+err,err);
+						done('set error: '+err);
 					}).then(({value})=>{
 						expect(value).to.equal('123');
 						done();
 					},(err)=>{
-						done('get error: '+err,err);
+						done('get error: '+err);
 					}).catch(done);
 				});
 
@@ -563,7 +563,7 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.true;
 						done();
 					},(err)=>{
-						done(err,err);
+						done(err);
 					}).catch(done);
 				});
 
@@ -572,7 +572,7 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.false;
 						done();
 					},(err)=>{
-						done(err,err);
+						done(err);
 					}).catch(done);
 				});
 
@@ -581,7 +581,7 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.true;
 						done();
 					},(err)=>{
-						done(err,err);
+						done(err);
 					}).catch(done);
 				});
 
@@ -590,7 +590,7 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.false;
 						done();
 					},(err)=>{
-						done(err,err);
+						done(err);
 					}).catch(done);
 				});
 
@@ -599,7 +599,7 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.true;
 						done();
 					},(err)=>{
-						done(err,err);
+						done(err);
 					}).catch(done);
 				});
 
@@ -608,7 +608,7 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.false;
 						done();
 					},(err)=>{
-						done(err,err);
+						done(err);
 					}).catch(done);
 				});
 
@@ -617,12 +617,12 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.true;
 						return proxy.stringData();
 					},(err)=>{
-						done('set error: '+err,err);
+						done('set error: '+err);
 					}).then(({value})=>{
 						expect(value).to.equal('qwerty');
 						done();
 					},(err)=>{
-						done('get error: '+err,err);
+						done('get error: '+err);
 					}).catch(done);
 				});
 
@@ -631,12 +631,12 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.true;
 						return proxy.stringData4();
 					},(err)=>{
-						done('set error: '+err,err);
+						done('set error: '+err);
 					}).then(({value})=>{
 						expect(value).to.equal('159');
 						done();
 					},(err)=>{
-						done('get error: '+err,err);
+						done('get error: '+err);
 					}).catch(done);
 				});
 
@@ -645,12 +645,12 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.true;
 						return proxy.stringData();
 					},(err)=>{
-						done('set error: '+err,err);
+						done('set error: '+err);
 					}).then(({value})=>{
 						expect(value).to.equal('xyz');
 						done();
 					},(err)=>{
-						done('get error: '+err,err);
+						done('get error: '+err);
 					}).catch(done);
 				});
 
@@ -659,12 +659,12 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.true;
 						return proxy.stringData3();
 					},(err)=>{
-						done('set error: '+err,err);
+						done('set error: '+err);
 					}).then(({value})=>{
 						expect(value).to.equal('369');
 						done();
 					},(err)=>{
-						done('get error: '+err,err);
+						done('get error: '+err);
 					}).catch(done);
 				});
 
@@ -673,12 +673,12 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.true;
 						return proxy.stringData().configure({ deleteProperty:true });
 					},(err)=>{
-						done('hasProperty error: '+err,err);
+						done('hasProperty error: '+err);
 					}).then(({value})=>{
 						expect(value).to.be.true;
 						return proxy.stringData();
 					},(err)=>{
-						done('delete error: '+err,err);
+						done('delete error: '+err);
 					}).then(({value})=>{
 						done("stringData action succeeded when it should not have");
 					},(err)=>{
@@ -689,7 +689,7 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.false;
 						done();
 					},(err)=>{
-						done('hasProperty error: '+err,err);
+						done('hasProperty error: '+err);
 					}).catch(done);
 				});
 
@@ -698,17 +698,17 @@ describe("Main: require-worker",()=>{
 						expect(value).to.be.false;
 						return proxy.somethingThatDoesNotExist().configure({ deleteProperty:true });
 					},(err)=>{
-						done('hasProperty error: '+err,err);
+						done('hasProperty error: '+err);
 					}).then(({value})=>{
 						expect(value).to.be.true;
 						return proxy.somethingThatDoesNotExist().configure({ hasProperty:true });
 					},(err)=>{
-						done('delete error: '+err,err);
+						done('delete error: '+err);
 					}).then(({value})=>{
 						expect(value).to.be.false;
 						done();
 					},(err)=>{
-						done('hasProperty error: '+err,err);
+						done('hasProperty error: '+err);
 					}).catch(done);
 				});
 				
@@ -717,7 +717,7 @@ describe("Main: require-worker",()=>{
 						expect(value).to.equal(42);
 						done();
 					},(err)=>{
-						done('get error: '+err,err);
+						done('get error: '+err);
 					}).catch(done);
 				});
 
@@ -732,7 +732,7 @@ describe("Main: require-worker",()=>{
 					expect(value).to.be.null;
 					done();
 				},(err)=>{
-					done('get error: '+err,err);
+					done('get error: '+err);
 				}).catch(done);
 			});
 			
@@ -745,7 +745,7 @@ describe("Main: require-worker",()=>{
 					expect(value).to.be.undefined;
 					done();
 				},(err)=>{
-					done('get error: '+err,err);
+					done('get error: '+err);
 				}).catch(done);
 			});
 			
@@ -759,7 +759,7 @@ describe("Main: require-worker",()=>{
 					expect(value.toISOString()).to.equal("2000-01-01T00:00:00.000Z");
 					done();
 				},(err)=>{
-					done('get error: '+err,err);
+					done('get error: '+err);
 				}).catch(done);
 			});
 			
@@ -773,7 +773,7 @@ describe("Main: require-worker",()=>{
 					expect('42.0'.match(value)).to.be.ok;
 					done();
 				},(err)=>{
-					done('get error: '+err,err);
+					done('get error: '+err);
 				}).catch(done);
 			});
 			
@@ -788,7 +788,7 @@ describe("Main: require-worker",()=>{
 					expect(value).to.satisfy(_.isNaN);
 					done();
 				},(err)=>{
-					done('get error: '+err,err);
+					done('get error: '+err);
 				}).catch(done);
 			});
 			
@@ -808,7 +808,7 @@ describe("Main: require-worker",()=>{
 						});
 						done();
 					},(err)=>{
-						done('get error: '+err,err);
+						done('get error: '+err);
 					}).catch(done);
 				});
 				
@@ -820,7 +820,7 @@ describe("Main: require-worker",()=>{
 						});
 						done();
 					},(err)=>{
-						done('get error: '+err,err);
+						done('get error: '+err);
 					}).catch(done);
 				});
 				
