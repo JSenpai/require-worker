@@ -4,7 +4,6 @@
 const path = require('path');
 
 const _ = require(path.resolve(__dirname,'./lib/underscore-with-mixins'));
-const ipcTransport = require(path.resolve(__dirname,'./lib/ipc-transport'));
 const coreClient = require(path.resolve(__dirname,'./lib/core-client'));
 const coreHost = require(path.resolve(__dirname,'./lib/core-host'));
 const coreProcessManager = require(path.resolve(__dirname,'./lib/core-process-manager'));
@@ -54,22 +53,7 @@ requireWorkerObj.getStackFiles = function getStackFiles(){
 	return result; 
 };
 
-const checkNewProcess = ()=>{
-	if(require.main===module && process.argv.length===4 && process.argv[2]==='--rwProcess'){
-		var ipcTransportID = process.argv[3];
-		var transport = ipcTransport.create({
-			id: ipcTransportID,
-			parent: true
-		});
-		var transportEvents = transport.createMessageEventEmitter();
-		transportEvents.on('processReady?',()=>{
-			transportEvents.send('processReady!');
-		});
-		transportEvents.on('requireHost',(hostOptions)=>{
-			new coreHost.requireWorkerHost(hostOptions);
-		});
-		transportEvents.send('processReady!');
-	}
-};
-
-checkNewProcess();
+// Check if the current process is a require-worker host
+if(require.main===module && process.argv.length===4 && process.argv[2]==='--rwProcess'){
+	coreHost.initHostProcess({ ipcTransportID:process.argv[3] });
+}
