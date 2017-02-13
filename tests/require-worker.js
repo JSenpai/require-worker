@@ -794,6 +794,40 @@ describe("Main: require-worker",()=>{
 			
 		});
 		
+		describe("Object data-type",()=>{
+			
+			describe("simple/safe object",()=>{
+				
+				it("get object",(done)=>{
+					proxy.someObject().then(({value})=>{
+						expect(value).to.deep.equal({
+							name: 'Tree',
+							type: 'Oak',
+							age: '25y7m4d',
+							height: '6.8m'
+						});
+						done();
+					},(err)=>{
+						done('get error: '+err,err);
+					}).catch(done);
+				});
+				
+				it("get only specific keys",(done)=>{
+					proxy.someObject('name','type').then(({value})=>{
+						expect(value).to.deep.equal({
+							name: 'Tree',
+							type: 'Oak'
+						});
+						done();
+					},(err)=>{
+						done('get error: '+err,err);
+					}).catch(done);
+				});
+				
+			});
+			
+		});
+		
 		// promise replies not yet implemented
 		//it("set timeout via .configure({ timeout:1 })",(done)=>{
 		//	proxy.promiseNeverFinish().configure({ timeout:1 }).then(({value})=>{
