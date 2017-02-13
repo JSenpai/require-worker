@@ -25,7 +25,7 @@ I decided to create this module because simply creating a forked process and cha
 
 ## Installation
 
-Warning: This project is written with ES6 features.
+Nodejs 6.0 or greater is required. This project is written with ES6 features
 
 Warning: This is currently in pre-release. It is not production-ready. Not all planned features are implemented yet.
 
