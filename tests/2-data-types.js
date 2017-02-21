@@ -350,19 +350,8 @@ describe("Require-Worker Data Types",()=>{
 
 	});
 	
-	after("destroy clients and processes",()=>{
-		
-		it("destroy existing clients",(done)=>{
-			for(var [key,client] of requireWorker.coreClient.clientsMap) client._destroy();
-			done();
-		});
-		
-		it("destroy remaining prepared processes",(done)=>{
-			var r = requireWorker.destroyPreparedProcesses();
-			expect(r).to.be.true;
-			done();
-		});
-		
+	after("destroy client",()=>{
+		client._destroy();
 	});
 	
 });
