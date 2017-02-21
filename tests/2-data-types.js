@@ -236,7 +236,7 @@ describe("Require-Worker Data Types",()=>{
 		
 	});
 	
-	describe("Null data-type",()=>{
+	describe("Null",()=>{
 
 		it("get null",(done)=>{
 			proxy.nullData().then(({value})=>{
@@ -249,7 +249,7 @@ describe("Require-Worker Data Types",()=>{
 
 	});
 
-	describe("Undefined data-type",()=>{
+	describe("Undefined",()=>{
 
 		it("get undefined",(done)=>{
 			proxy.undefinedData().then(({value})=>{
@@ -262,7 +262,7 @@ describe("Require-Worker Data Types",()=>{
 
 	});
 
-	describe("Date data-type",()=>{
+	describe("Date",()=>{
 
 		it("get date, date matches data",(done)=>{
 			proxy.dateData().then(({value})=>{
@@ -276,7 +276,7 @@ describe("Require-Worker Data Types",()=>{
 
 	});
 
-	describe("Regex data-type",()=>{
+	describe("Regular Expression",()=>{
 
 		it("get regex, match regex on valid string",(done)=>{
 			proxy.regexNumberOnly().then(({value})=>{
@@ -290,7 +290,7 @@ describe("Require-Worker Data Types",()=>{
 
 	});
 
-	describe("NaN data-type",()=>{
+	describe("NaN",()=>{
 
 		it("get NaN",(done)=>{
 			proxy.NaNData().then(({value})=>{
@@ -305,7 +305,7 @@ describe("Require-Worker Data Types",()=>{
 
 	});
 
-	describe("Object data-type",()=>{
+	describe("Object",()=>{
 
 		describe("simple/safe object",()=>{
 
