@@ -100,6 +100,7 @@ describe("Main: require-worker",()=>{
 			expect(client.proxyCom).to.be.instanceof(proxyCom.proxyCom);
 			expect(client).to.have.property('proxy');
 			expect(client).to.have.property('preConfiguredProxy');
+			expect(client).to.have.property('isClientProxy');
 			expect(client.preConfiguredProxy).to.be.a('function');
 			done();
 		});
@@ -289,6 +290,25 @@ describe("Main: require-worker",()=>{
 			it("should have a valid .client property",()=>{
 				expect(c).to.have.property('client');
 				expect(c.client).to.equal(client);
+			});
+			
+		});
+		
+		describe("isClientProxy",()=>{
+			
+			it("should have client.proxy pass isClientProxy",(done)=>{
+				expect(proxy).to.satisfy(client.isClientProxy.bind(client));
+				done();
+			});
+			
+			it("should have random proxy not pass isClientProxy",(done)=>{
+				expect(new Proxy({},{})).to.not.satisfy(client.isClientProxy.bind(client));
+				done();
+			});
+			
+			it("should have null not pass isClientProxy",(done)=>{
+				expect(null).to.not.satisfy(client.isClientProxy.bind(client));
+				done();
 			});
 			
 		});
