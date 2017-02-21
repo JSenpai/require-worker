@@ -304,6 +304,67 @@ describe("Require-Worker Data Types",()=>{
 		});
 
 	});
+	
+	describe("Promise",()=>{
+		
+		it("instant resolve",(done)=>{
+			proxy.promiseResolve().then(({value})=>{
+				value.then(()=>{
+					done();
+				},(err)=>{
+					done('promise rejected: '+err);
+				});
+			},(err)=>{
+				done('promise error: '+err);
+			}).catch(done);
+		});
+		
+		it("instant reject",(done)=>{
+			proxy.promiseReject().then(({value})=>{
+				value.then((val)=>{
+					done('promise resolved: '+val);
+				},()=>{
+					done();
+				});
+			},(err)=>{
+				done('promise error: '+err);
+			}).catch(done);
+		});
+		
+		it("delayed resolve",(done)=>{
+			var timeStart = Date.now();
+			proxy.promiseResolveDelayed(100).then(({value:promise})=>{
+				promise.then(()=>{
+					var timeNow = Date.now();
+					if(timeNow-timeStart<100) done('promise resolved too early ('+(timeNow-timeStart)+'ms)');
+					else if(timeNow-timeStart>9000) done('promise resolved too late ('+(Date.now()-timeStart)+'ms)');
+					else done();
+				},(err)=>{
+					done('promise rejected ('+(Date.now()-timeStart)+'ms): '+err);
+				});
+			},(err)=>{
+				done('promise error: '+err);
+			}).catch(done);
+		});
+		
+		it("timed out via .configure({ timeout:x })",(done)=>{
+			var timeStart = Date.now();
+			proxy.promiseResolveDelayed(100).configure({ timeout:90 }).then(({value:promise})=>{
+				promise.then((val)=>{
+					done('promise resolved ('+(Date.now()-timeStart)+'ms): '+val);
+				},(err)=>{
+					done('promise rejected ('+(Date.now()-timeStart)+'ms): '+err);
+				});
+			},(err)=>{
+				expect(err).to.have.property('code');
+				expect(err.code).to.equal('TIMEOUT');
+				if(Date.now()-timeStart<90) done('promise timed out too early ('+(Date.now()-timeStart)+'ms)');
+				else if(Date.now()-timeStart>9000) done('promise timed out too late ('+(Date.now()-timeStart)+'ms)');
+				else done();
+			}).catch(done);
+		});
+		
+	});
 
 	describe("Object",()=>{
 
@@ -337,17 +398,6 @@ describe("Require-Worker Data Types",()=>{
 
 		});
 		
-		// promise replies not yet implemented
-		//it("set timeout via .configure({ timeout:1 })",(done)=>{
-		//	proxy.promiseNeverFinish().configure({ timeout:1 }).then(({value})=>{
-		//		done("stringData action succeeded when it should not have");
-		//	},(err)=>{
-		//		expect(err).to.have.property('code');
-		//		expect(err.code).to.equal('TIMEOUT');
-		//		done();
-		//	}).catch(done);
-		//});
-
 	});
 	
 	after("destroy client",()=>{

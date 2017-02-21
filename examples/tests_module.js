@@ -23,6 +23,12 @@ exports.promiseReject = ()=>{
 	return Promise.reject();
 };
 
+exports.promiseResolveDelayed = (timeout)=>{
+	return new Promise((resolve,reject)=>{
+		setTimeout(resolve,timeout);
+	});
+};
+
 exports.undefinedData = void 0;
 
 exports.nullData = null;
