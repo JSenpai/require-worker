@@ -247,6 +247,79 @@ describe("Main: require-worker",()=>{
 			client.events.once('requireSuccess',done);
 		});
 		
+		describe("proxy",()=>{
+			
+			it("should have own constructor property",()=>{
+				expect(proxy).to.have.property('constructor');
+				expect(proxy).to.have.ownProperty('constructor');
+			});
+			
+			it("should have own prototype property",()=>{
+				expect(proxy).to.have.property('prototype');
+				expect(proxy).to.have.ownProperty('prototype');
+			});
+			
+			it("constructor property should not be enumerable",()=>{
+				expect(Object.prototype.propertyIsEnumerable.call(proxy,'constructor')).to.be.false;
+			});
+			
+			it("prototype property should not be enumerable",()=>{
+				expect(Object.prototype.propertyIsEnumerable.call(proxy,'prototype')).to.be.false;
+			});
+			
+			it("constructor property should not be extensible",()=>{
+				expect(proxy.constructor).to.not.be.extensible;
+			});
+			
+			it("prototype property should not be extensible",()=>{
+				expect(proxy.prototype).to.not.be.extensible;
+			});
+			
+			it("should have no properties",()=>{
+				expect(Object.keys(proxy)).to.be.empty;
+			});
+			
+			it("proxy should be an object",()=>{
+				expect(proxy).to.satisfy(_.isObject.bind(_));
+			});
+			
+			it("#toJSON should be an empty object",()=>{
+				expect(proxy.toJSON()).to.be.empty;
+			});
+			
+			it("#inspect should be an empty object",()=>{
+				expect(proxy.inspect()).to.be.empty;
+			});
+			
+			it("#valueOf should return proxy",()=>{
+				expect(proxy.valueOf()).to.equal(proxy);
+			});
+			
+			it("#toString should equal '[object Object]'",()=>{
+				expect(proxy.toString()).to.equal('[object Object]');
+			});
+			
+		});
+		
+		describe("proxy.constructor",()=>{
+			
+			var c;
+			it("should be a function",()=>{
+				c = proxy.constructor;
+				expect(c).to.be.a('function');
+			});
+			
+			it("should be the bound function proxyInterfaceGet",()=>{
+				expect(c.name).to.equal('bound proxyInterfaceGet');
+			});
+			
+			it("should have a valid .client property",()=>{
+				expect(c).to.have.property('client');
+				expect(c.client).to.equal(client);
+			});
+			
+		});
+		
 		describe("proxy()",()=>{
 			
 			it("should fail with 'INVALID_TARGET' (host export is an object)",(done)=>{
@@ -267,30 +340,6 @@ describe("Main: require-worker",()=>{
 					expect(err.code).to.equal('INVALID_TARGET');
 					done();
 				}).catch(done);
-			});
-			
-		});
-		
-		describe("proxy.constructor",()=>{
-			
-			it("should be own property",()=>{
-				expect(proxy).to.have.property('constructor');
-				expect(proxy).to.have.ownProperty('constructor');
-			});
-			
-			var c;
-			it("should be a function",()=>{
-				c = proxy.constructor;
-				expect(c).to.be.a('function');
-			});
-			
-			it("should be the bound function proxyInterfaceGet",()=>{
-				expect(c.name).to.equal('bound proxyInterfaceGet');
-			});
-			
-			it("should have a valid .client property",()=>{
-				expect(c).to.have.property('client');
-				expect(c.client).to.equal(client);
 			});
 			
 		});
