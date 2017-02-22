@@ -419,8 +419,15 @@ describe("Main: require-worker",()=>{
 				expect(b.configure).to.be.a('function');
 			});
 			
-			it("throw error on late .configure call",()=>{
-				expect(b.configure).to.be.throw(Error);
+			it("error on late .configure call",(done)=>{
+				try{
+					b.configure({});
+					done("it did not error");
+				}catch(error){
+					expect(error).to.have.property('code');
+					expect(error.code).to.equal('LATE_CONFIGURE');
+					done();
+				}
 			});
 			
 			var d, e;
