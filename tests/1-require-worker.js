@@ -443,6 +443,69 @@ describe("Main: require-worker",()=>{
 			
 		});
 		
+		describe("proxy restrictions",()=>{
+			
+			it("should error on property set or delete",(done)=>{
+				try{
+					proxy.something = 42;
+					done("it did not error when setting");
+				}catch(err){
+					try{
+						delete proxy.stringData;
+						done("it did not error when deleting");
+					}catch(error){
+						expect(error).to.have.property('code');
+						expect(error.code).to.equal('INVALID_OPERATION');
+						done();
+					}
+				}
+			});
+			
+			it("should error on constructor property set or delete",(done)=>{
+				try{
+					proxy.constructor = function(){};
+					done("it did not error when setting");
+				}catch(err){
+					try{
+						delete proxy.constructor;
+						done("it did not error when deleting");
+					}catch(error){
+						expect(error).to.have.property('code');
+						expect(error.code).to.equal('INVALID_OPERATION');
+						done();
+					}
+				}
+			});
+			
+			it("should error on prototype property set or delete",(done)=>{
+				try{
+					proxy.prototype = {};
+					done("it did not error when setting");
+				}catch(err){
+					try{
+						delete proxy.prototype;
+						done("it did not error when deleting");
+					}catch(error){
+						expect(error).to.have.property('code');
+						expect(error.code).to.equal('INVALID_OPERATION');
+						done();
+					}
+				}
+			});
+			
+			it("should error on property Object.defineProperty",(done)=>{
+				try{
+					Object.defineProperty(proxy,'stringData',{});
+					done("it did not error when setting");
+				}catch(error){
+					expect(error).to.have.property('code');
+					expect(error.code).to.equal('INVALID_OPERATION');
+					done();
+				}
+			});
+			
+		});
+		
 		describe("misc configure options",()=>{
 			
 			it("promise should resolve instead of rejecting via .configure({ resolveError:true })",(done)=>{
