@@ -19,15 +19,12 @@ var prepareProcessCount = 0;
 describe("Main: require-worker",()=>{
 	
 	if(prepareProcessCount>0){
-		describe("preparing "+prepareProcessCount+" processes (optional)",()=>{
-			
-			it("should succeed",(done)=>{
-				var r = requireWorker.prepareProcesses({ count:prepareProcessCount });
-				expect(r).to.be.true;
-				expect(requireWorker.getPreparedProcessesCount()).to.equal(prepareProcessCount);
-				done();
-			});
-			
+		it("preparing "+prepareProcessCount+" processes (optional)",function(done){
+			this.slow(prepareProcessCount*500);
+			var r = requireWorker.prepareProcesses({ count:prepareProcessCount });
+			expect(r).to.be.true;
+			expect(requireWorker.getPreparedProcessesCount()).to.equal(prepareProcessCount);
+			done();
 		});
 	}
 	
@@ -47,7 +44,8 @@ describe("Main: require-worker",()=>{
 		});
 		
 		var firstClient = null, preparedProcessesCount = 0;
-		it("should succeed to require existing module",(done)=>{
+		it("should succeed to require existing module",function(done){
+			this.slow(1000);
 			preparedProcessesCount = requireWorker.getPreparedProcessesCount();
 			try{
 				var client = firstClient = requireWorker.require(testModuleFile,{ returnClient:true }); // New Client
@@ -70,7 +68,8 @@ describe("Main: require-worker",()=>{
 			done();
 		});
 
-		it("should fail to require non-existant module",(done)=>{
+		it("should fail to require non-existant module",function(done){
+			this.slow(1000);
 			try{
 				var client = requireWorker.require('./something.that.does.not.exist.js',{ returnClient:true }); // New Client
 				expect(client).to.be.instanceof(requireWorker.coreClient.requireWorkerClient);
@@ -141,7 +140,8 @@ describe("Main: require-worker",()=>{
 			done();
 		});
 		
-		it("should return new requireWorker client if ownProcess is specified, and also have different child process",(done)=>{
+		it("should return new requireWorker client if ownProcess is specified, and also have different child process",function(done){
+			this.slow(1000);
 			var client1 = requireWorker.require(testModuleFile,{ returnClient:true }); // Returns Cached Client
 			var client2 = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client, New Child Process
 			expect(client1).to.not.equal(client2);
@@ -150,7 +150,8 @@ describe("Main: require-worker",()=>{
 			done();
 		});
 		
-		it("should have different child processes if two new clients are created with ownProcess:true",(done)=>{
+		it("should have different child processes if two new clients are created with ownProcess:true",function(done){
+			this.slow(2000);
 			var client1 = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client, New Child Process
 			var client2 = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client, New Child Process
 			expect(client1).to.not.equal(client2);
@@ -159,7 +160,8 @@ describe("Main: require-worker",()=>{
 			done();
 		});
 		
-		it("should have same child process if two new clients are created when the first client has ownProcess:true, and the second client has shareProcess set to the first client",(done)=>{
+		it("should have same child process if two new clients are created when the first client has ownProcess:true, and the second client has shareProcess set to the first client",function(done){
+			this.slow(1000);
 			var client1 = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client, New Child Process
 			var client2 = requireWorker.require(testModuleFile,{ returnClient:true, shareProcess:client1 }); // New Client, Existing Child Process
 			expect(client1).to.not.equal(client2);
@@ -181,7 +183,8 @@ describe("Main: require-worker",()=>{
 		describe("calls should error with code 'DESTROYED' on client destroy",()=>{
 			var client, proxy;
 			
-			it("have promise action work after create, before destroy",(done)=>{
+			it("have promise action work after create, before destroy",function(done){
+				this.slow(1000);
 				client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
 				proxy = client.proxy;
 				proxy.stringData().then(()=>{
@@ -218,7 +221,8 @@ describe("Main: require-worker",()=>{
 		
 		describe("should reject promises with error code 'DESTROYED' on host destroy",()=>{
 			
-			it("have promise action error after destroy",(done)=>{
+			it("have promise action error after destroy",function(done){
+				this.slow(1000);
 				var client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
 				client.proxy.destroyHost().then(()=>{
 					done("promise action succeeded when it should not have");
@@ -236,14 +240,11 @@ describe("Main: require-worker",()=>{
 	describe("proxy actions on main interface (target = host export)",()=>{
 		var client, proxy;
 		
-		describe("create client",()=>{
-			
-			it("should succeed",(done)=>{
-				client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
-				proxy = client.proxy;
-				done();
-			});
-			
+		it("create client",function(done){
+			this.slow(1000);
+			client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
+			proxy = client.proxy;
+			client.events.once('requireSuccess',done);
 		});
 		
 		describe("proxy()",()=>{

@@ -19,9 +19,11 @@ var prepareProcessCount = 5;
 describe("Require-Worker Data Types",()=>{
 	var client, proxy;
 	
-	before('require testModule client',()=>{
+	it("require testModule client",function(done){
+		this.slow(1000);
 		client = requireWorker.require(testModuleFile,{ returnClient:true });
 		proxy = client.proxy;
+		client.events.once('requireSuccess',done);
 	});
 	
 	describe("String",()=>{
@@ -331,7 +333,8 @@ describe("Require-Worker Data Types",()=>{
 			}).catch(done);
 		});
 		
-		it("delayed resolve",(done)=>{
+		it("delayed resolve",function(done){
+			this.slow(100*2.1);
 			var timeStart = Date.now();
 			proxy.promiseResolveDelayed(100).then(({value:promise})=>{
 				promise.then(()=>{
@@ -347,7 +350,8 @@ describe("Require-Worker Data Types",()=>{
 			}).catch(done);
 		});
 		
-		it("timed out via .configure({ timeout:x })",(done)=>{
+		it("timed out via .configure({ timeout:x })",function(done){
+			this.slow(90*2.1);
 			var timeStart = Date.now();
 			proxy.promiseResolveDelayed(100).configure({ timeout:90 }).then(({value:promise})=>{
 				promise.then((val)=>{
