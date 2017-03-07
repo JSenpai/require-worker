@@ -234,6 +234,15 @@ describe("Require-Worker Data Types",()=>{
 				}).catch(done);
 			});
 			
+			it("return value via auto resolved/rejected result promise .configure({ promiseResult:true }) (same as { returnKey:'promise' })",(done)=>{
+				proxy.numberData().configure({ promiseResult:true }).then((value)=>{
+					expect(value).to.equal(42);
+					done();
+				},(err)=>{
+					done('get error: '+err);
+				}).catch(done);
+			});
+			
 		});
 		
 	});
