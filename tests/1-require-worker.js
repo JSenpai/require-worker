@@ -448,6 +448,54 @@ describe("Main: require-worker",()=>{
 				}
 			});
 			
+			it("return resolved promise via result.promise get",(done)=>{
+				proxy.stringData().then(({value,promise})=>{
+					if(!_.isPromise(promise)) return done("result.promise is not a promise?");
+					promise.then((value2)=>{
+						expect(value2).to.equal(value);
+						done();
+					},(err)=>{
+						done("result.promise reject: "+err);
+					}).catch(done);
+				},(err)=>{
+					done("rejected with: "+err);
+				}).catch(done);
+			});
+			
+			it("return rejected promise via result.promise get",(done)=>{
+				proxy.somethingThatDoesNotExist().then(({value})=>{
+					done("resolved when it should not have, with value: "+value);
+				},({error,promise})=>{
+					if(!_.isPromise(promise)) return done("result.promise is not a promise?");
+					promise.then((value)=>{
+						done("result.promise resolved, with value: "+value);
+					},(err)=>{
+						expect(err).to.equal(error);
+						done();
+					}).catch(done);
+				}).catch(done);
+			});
+			
+			it("promise chain with result.promise get",(done)=>{
+				proxy.stringData().then(({promise})=>promise).then(proxy.hello).then(({value})=>{
+					expect(value).to.equal('Hello bar!');
+					done();
+				},(err)=>done("rejected with: "+err)).catch(done);
+			});
+			
+			it("Promise.all with result.promise get",(done)=>{
+				Promise.all([
+					proxy.stringData().then(({promise})=>promise,(err)=>done("proxy.stringData() rejected with: "+err)),
+					proxy.numberData().then(({promise})=>promise,(err)=>done("proxy.numberData() rejected with: "+err)),
+					proxy.hello('World').then(({promise})=>promise,(err)=>done("proxy.hello('World') rejected with: "+err))
+				]).then((values)=>{
+					expect(values[0]).to.equal('bar');
+					expect(values[1]).to.equal(42);
+					expect(values[2]).to.equal('Hello World!');
+					done();
+				}).catch(done);
+			});
+			
 		});
 		
 		describe("proxy restrictions",()=>{
