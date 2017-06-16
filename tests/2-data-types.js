@@ -469,7 +469,7 @@ describe("Require-Worker Data Types",()=>{
 	});
 	
 	after("destroy client",()=>{
-		client._destroy();
+		client.destroy();
 	});
 	
 });

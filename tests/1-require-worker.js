@@ -196,9 +196,9 @@ describe("Main: require-worker",()=>{
 			
 			it("have promise action called after destroy, and reject with destroy error",(done)=>{
 				try{
-					client._destroy();
+					client.destroy();
 				}catch(err){
-					done("client._destroy() errored when it should not have: "+err);
+					done("client.destroy() errored when it should not have: "+err);
 				}
 				var promise;
 				try{
@@ -752,7 +752,7 @@ describe("Main: require-worker",()=>{
 	describe("destroy clients and processes",()=>{
 		
 		it("destroy existing clients",(done)=>{
-			for(var [key,client] of requireWorker.coreClient.clientsMap) client._destroy();
+			for(var [key,client] of requireWorker.coreClient.clientsMap) client.destroy();
 			done();
 		});
 		
