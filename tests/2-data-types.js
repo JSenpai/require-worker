@@ -373,7 +373,8 @@ describe("Require-Worker Data Types",()=>{
 				},(err)=>{
 					expect(err).to.have.property('code');
 					expect(err.code).to.equal('TIMEOUT');
-					if(Date.now()-timeStart<90) done('promise timed out too early ('+(Date.now()-timeStart)+'ms)');
+					// Check with 1ms less than timeout value, as the processes may run faster/slower than eachother. 1ms should be enough to pass most tests.
+					if(Date.now()-timeStart<89) done('promise timed out too early ('+(Date.now()-timeStart)+'ms)');
 					else if(Date.now()-timeStart>9000) done('promise timed out too late ('+(Date.now()-timeStart)+'ms)');
 					else done();
 				}).catch(done);

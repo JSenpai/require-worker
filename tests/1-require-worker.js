@@ -309,8 +309,8 @@ describe("Main: require-worker",()=>{
 				expect(c).to.be.a('function');
 			});
 			
-			it("should be the bound function proxyInterfaceGet",()=>{
-				expect(c.name).to.equal('bound proxyInterfaceGet');
+			it("should be the bound function _proxyTargetConstructor",()=>{
+				expect(c.name).to.equal('bound _proxyTargetConstructor');
 			});
 			
 			it("should have a valid .client property",()=>{
@@ -369,14 +369,14 @@ describe("Main: require-worker",()=>{
 			it("return result function on property get, with existing target property",()=>{
 				a = proxy.stringData;
 				expect(a).to.be.a('function');
-				expect(a.name).to.equal('requireWorkerProxyInvoker');
+				expect(a.name).to.equal('_proxyTargetConstructorResult');
 			});
 			
 			var h;
 			it("return result function on property get, with non-existant target property",()=>{
 				h = h = proxy.somethingThatDoesNotExist;
 				expect(h).to.be.a('function');
-				expect(h.name).to.equal('requireWorkerProxyInvoker');
+				expect(h.name).to.equal('_proxyTargetConstructorResult');
 			});
 			
 			var b;
