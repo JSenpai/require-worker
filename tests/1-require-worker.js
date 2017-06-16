@@ -11,7 +11,7 @@ var _ = require('../lib/underscore-with-mixins');
 var requireWorker = require('../');
 var ipcTransport = require('../lib/ipc-transport');
 var proxyCom = require('../lib/proxy-communication');
-var proxyDataHandler = require('../lib/proxy-data-handler');
+var proxyDataHandler = require('../lib/proxy-handler');
 
 var testModuleFile = '../examples/tests_module';
 var prepareProcessCount = 0;
@@ -309,8 +309,8 @@ describe("Main: require-worker",()=>{
 				expect(c).to.be.a('function');
 			});
 			
-			it("should be the bound function _proxyTargetConstructor",()=>{
-				expect(c.name).to.equal('bound _proxyTargetConstructor');
+			it("should be the bound function proxyTargetConstructor",()=>{
+				expect(c.name).to.equal('bound proxyTargetConstructor');
 			});
 			
 			it("should have a valid .client property",()=>{
@@ -369,14 +369,14 @@ describe("Main: require-worker",()=>{
 			it("return result function on property get, with existing target property",()=>{
 				a = proxy.stringData;
 				expect(a).to.be.a('function');
-				expect(a.name).to.equal('_proxyTargetConstructorResult');
+				expect(a.name).to.equal('proxyTargetConstructorResult');
 			});
 			
 			var h;
 			it("return result function on property get, with non-existant target property",()=>{
 				h = h = proxy.somethingThatDoesNotExist;
 				expect(h).to.be.a('function');
-				expect(h.name).to.equal('_proxyTargetConstructorResult');
+				expect(h.name).to.equal('proxyTargetConstructorResult');
 			});
 			
 			var b;

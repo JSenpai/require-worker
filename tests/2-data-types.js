@@ -11,7 +11,7 @@ var _ = require('../lib/underscore-with-mixins');
 var requireWorker = require('../');
 var ipcTransport = require('../lib/ipc-transport');
 var proxyCom = require('../lib/proxy-communication');
-var proxyDataHandler = require('../lib/proxy-data-handler');
+var proxyDataHandler = require('../lib/proxy-handler');
 
 var testModuleFile = '../examples/tests_module';
 var prepareProcessCount = 5;
