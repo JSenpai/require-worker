@@ -62,3 +62,18 @@ exports.someObject = {
 	height: '6.8m'
 };
 
+const promisify = require('util').promisify;
+if (promisify && promisify.custom) {
+	
+	exports.somePromisifiableFunction = (cb)=>{
+		setTimeout(()=>cb('success'),10);
+	};
+	exports.somePromisifiableFunction[promisify.custom] = ()=>{
+		return new Promise((resolve,reject)=>{
+			exports.somePromisifiableFunction(resolve);
+		});
+	};
+	
+} else {
+	exports.somePromisifiableFunction = false;
+}

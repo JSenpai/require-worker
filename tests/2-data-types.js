@@ -434,6 +434,37 @@ describe("Require-Worker Data Types",()=>{
 			});
 			
 		});
+		
+		describe("Misc Configure Options",()=>{
+			
+			describe("Promisify via .configure({ promisify:true })",()=>{
+				
+				var promisify = require('util').promisify;
+				if(promisify && promisify.custom){
+					it("promisify a simple function with a timer",(done)=>{
+						var tmr = setTimeout(()=>done('action timed out'),100);
+						proxy.somePromisifiableFunction().configure({ promisify:true, followPromise:true })
+						//.then(({value})=>{ // uncomment if followPromise is not true
+						//	if(!_.isPromise(value)) done('value is not a promise');
+						//	else return value.then((value)=>({value}));
+						//})
+						.then(({value})=>{
+							clearTimeout(tmr);
+							if(value==='success') done();
+							else done('returned: '+require('util').inspect(value));
+						})
+						.catch((err)=>{
+							clearTimeout(tmr);
+							done("Reject Error: "+err);
+						});
+					});
+				} else {
+					it("not supported in this version of NodeJS");
+				}
+				
+			});
+			
+		});
 	
 	});
 	
