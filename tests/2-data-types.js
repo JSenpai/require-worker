@@ -344,6 +344,25 @@ describe("Require-Worker Data Types",()=>{
 				}).catch(done);
 			});
 			
+			it("resolve via .configure({ followPromise:true })",(done)=>{
+				proxy.promiseResolveValue('foobar').configure({ followPromise:true }).then(({value})=>{
+					if(value==='foobar') done();
+					else done('returned: '+require('util').inspect(value));
+				},(err)=>{
+					done('promise error: '+err);
+				}).catch(done);
+			});
+			
+			it("reject via .configure({ followPromise:true })",(done)=>{
+				proxy.promiseRejectValue('test').configure({ followPromise:true }).then(({value})=>{
+					done('resolved: '+require('util').inspect(value));
+				},(err)=>{
+					var { value } = err;
+					if(value==='test') done();
+					else done('rejected: '+err);
+				});
+			});
+			
 			it("delayed resolve",function(done){
 				this.slow(100*2.1);
 				var timeStart = Date.now();

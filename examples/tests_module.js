@@ -29,6 +29,14 @@ exports.promiseResolveDelayed = (timeout)=>{
 	});
 };
 
+exports.promiseResolveValue = (value)=>{
+	return Promise.resolve(value);
+};
+
+exports.promiseRejectValue = (value)=>{
+	return Promise.reject(value);
+};
+
 exports.undefinedData = void 0;
 
 exports.nullData = null;
