@@ -7,10 +7,10 @@
     "example": "examples"
   },
   "scripts": {
-    "start": "node index.js",
     "example": "node ./examples/example1.js",
     "test": "mocha -t 10000 --recursive tests/**/*.js",
-    "test-watch": "mocha -t 10000 --recursive tests/**/*.js --watch"
+    "test-watch": "mocha -t 10000 --recursive tests/**/*.js --watch",
+    "test-watch-inspect": "mocha -t 10000 --recursive tests/**/*.js --watch --inspect"
   },
   "repository": {
     "type": "git",
