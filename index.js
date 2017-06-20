@@ -46,8 +46,7 @@ requireWorkerObj.getStackFiles = function getStackFiles(){
 	for(let i=0,l=cssfArr.length; i<l; i++){
 		let cssf = cssfArr[i]; // https://github.com/v8/v8/wiki/Stack-Trace-API
 		let file = cssf.getFileName();
-		if(file===__filename) continue;
-		if(file===coreClient.__filename) continue;
+		if(file===__filename || file===coreClient.__filename || file===coreHost.__filename || file===coreProcessManager.__filename) continue;
 		result.push(file);
 	}
 	return result; 
