@@ -8,9 +8,10 @@
   },
   "scripts": {
     "example": "node ./examples/example1.js",
-    "test": "mocha -t 10000 --recursive tests/**/*.js",
-    "test-watch": "mocha -t 10000 --recursive tests/**/*.js --watch",
-    "test-watch-inspect": "mocha -t 10000 --recursive tests/**/*.js --watch --inspect"
+    "test": "mocha -t 10000 --recursive tests/**/*.js --check-leaks --use_strict",
+    "test-watch": "mocha -t 10000 --recursive tests/**/*.js --check-leaks --use_strict --watch --full-trace --trace-deprecation",
+    "test-watch-min": "mocha -t 10000 --recursive tests/**/*.js --check-leaks --use_strict --watch --full-trace --trace-deprecation --reporter=progress",
+    "test-watch-inspect": "mocha -t 10000 --recursive tests/**/*.js --use_strict --watch --full-trace --trace-deprecation --inspect"
   },
   "repository": {
     "type": "git",
