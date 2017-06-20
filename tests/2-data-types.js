@@ -381,9 +381,12 @@ describe("Require-Worker Data Types",()=>{
 			});
 			
 			it("timed out via .configure({ timeout:x })",function(done){
-				this.slow(90*2.1);
+				let timeoutMS = 90;
+				this.slow(timeoutMS*2.1);
+				this.timeout(timeoutMS*3);
+				this.retries(3);
 				var timeStart = Date.now();
-				proxy.promiseResolveDelayed(100).configure({ timeout:90 }).then(({value:promise})=>{
+				proxy.promiseResolveDelayed(100).configure({ timeout:timeoutMS }).then(({value:promise})=>{
 					promise.then((val)=>{
 						done('promise resolved ('+(Date.now()-timeStart)+'ms): '+val);
 					},(err)=>{
@@ -392,9 +395,9 @@ describe("Require-Worker Data Types",()=>{
 				},(err)=>{
 					expect(err).to.have.property('code');
 					expect(err.code).to.equal('TIMEOUT');
-					// Check with 1ms less than timeout value, as the processes may run faster/slower than eachother. 1ms should be enough to pass most tests.
-					if(Date.now()-timeStart<89) done('promise timed out too early ('+(Date.now()-timeStart)+'ms)');
-					else if(Date.now()-timeStart>9000) done('promise timed out too late ('+(Date.now()-timeStart)+'ms)');
+					// Check with 1ms before/after, as the processes may run faster/slower than eachother. retries are also enabled above.
+					if(Date.now()-timeStart<timeoutMS-1) done('promise timed out too early ('+(Date.now()-timeStart)+'ms)');
+					else if(Date.now()-timeStart>timeoutMS+1) done('promise timed out too late ('+(Date.now()-timeStart)+'ms)');
 					else done();
 				}).catch(done);
 			});
