@@ -395,9 +395,9 @@ describe("Require-Worker Data Types",()=>{
 				},(err)=>{
 					expect(err).to.have.property('code');
 					expect(err.code).to.equal('TIMEOUT');
-					// Check with 1ms before/after, as the processes may run faster/slower than eachother. retries are also enabled above.
-					if(Date.now()-timeStart<timeoutMS-1) done('promise timed out too early ('+(Date.now()-timeStart)+'ms)');
-					else if(Date.now()-timeStart>timeoutMS+1) done('promise timed out too late ('+(Date.now()-timeStart)+'ms)');
+					// Check with some delay before/after, as the processes may run faster/slower than eachother. retries are also enabled above.
+					if(Date.now()-timeStart<timeoutMS-10) done('promise timed out too early ('+(Date.now()-timeStart)+'ms)');
+					else if(Date.now()-timeStart>timeoutMS+10) done('promise timed out too late ('+(Date.now()-timeStart)+'ms)');
 					else done();
 				}).catch(done);
 			});
