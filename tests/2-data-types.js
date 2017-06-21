@@ -1,4 +1,4 @@
-/* global Promise, Proxy */
+/* global Promise, Proxy, describe, it, expect */
 "use strict";
 
 var chai = require("chai");
