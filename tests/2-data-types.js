@@ -69,6 +69,15 @@ describe("Require-Worker Data Types",()=>{
 					}).catch(done);
 				});
 				
+				it("get string via function result",(done)=>{
+					proxy.hello("World").then(({value})=>{
+						expect(value).to.equal('Hello World!');
+						done();
+					},(err)=>{
+						done('get error: '+err);
+					}).catch(done);
+				});
+				
 			});
 			
 			describe("support configure options",()=>{
