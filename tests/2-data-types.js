@@ -484,46 +484,49 @@ describe("Require-Worker Data Types",()=>{
 			
 			it("Instant Callback",function(done){
 				this.timeout(500);
+				var done2 = _.after(2,done);
 				proxy.instantCallback((...args)=>{
 					expect(args).to.be.an('array');
 					expect(args).to.have.lengthOf(1);
 					expect(args[0]).to.equal('hello');
-					done();
+					done2();
 				},'hello')
 				.then(({value})=>{
 					expect(value).to.equal(42);
+					done2();
 				}).catch(done);
 			});
 			
 			it("Timed Callback",function(done){
 				this.timeout(500);
+				var done2 = _.after(2,done);
 				proxy.timedCallback((...args)=>{
 					expect(args).to.be.an('array');
 					expect(args).to.have.lengthOf(2);
 					expect(args[0]).to.equal('hi');
 					expect(args[1]).to.equal('world');
-					done();
+					done2();
 				},'hi','world')
 				.then(({value})=>{
 					expect(value).to.equal('foo');
+					done2();
 				}).catch(done);
 			});
-
+			
 			it("Multiple Callbacks",function(done){
 				this.timeout(500);
+				var done2 = _.after(4,done);
 				proxy.multipleCallbacks(
-					(i)=>{ expect(i).to.equal(0); },
-					(i)=>{ expect(i).to.equal(1); },
-					(i)=>{
-						expect(i).to.equal(2);
-						done();
-					}
+					(i)=>{ expect(i).to.equal(0); done2() },
+					(i)=>{ expect(i).to.equal(1); done2() },
+					(i)=>{ expect(i).to.equal(2); done2(); }
 				)
 				.then(({value})=>{
 					expect(value).to.equal('bar');
+					done2();
 				}).catch(done);
 			});
-
+			
 		});
 		
 	});
