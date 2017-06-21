@@ -26,7 +26,7 @@ describe("Require-Worker Data Types",()=>{
 		client.events.once('requireSuccess',done);
 	});
 	
-	describe("Return values",()=>{
+	describe("Return Values",()=>{
 		
 		describe("String",()=>{
 			
@@ -475,7 +475,46 @@ describe("Require-Worker Data Types",()=>{
 			});
 			
 		});
+		
+	});
 	
+	describe("Argument Values",()=>{
+		
+		describe("Function Callback",()=>{
+			
+			it("Instant Callback",function(done){
+				this.timeout(500);
+				proxy.instantCallback((...args)=>{
+					expect(args).to.be.an('array');
+					expect(args).to.have.lengthOf(1);
+					expect(args[0]).to.equal('hello');
+					done();
+				},'hello')
+				.then(({value})=>{
+					expect(value).to.equal(42);
+				},(err)=>{
+					done(err);
+				}).catch(done);
+			});
+			
+			it("Timed Callback",function(done){
+				this.timeout(500);
+				proxy.timedCallback((...args)=>{
+					expect(args).to.be.an('array');
+					expect(args).to.have.lengthOf(2);
+					expect(args[0]).to.equal('hi');
+					expect(args[1]).to.equal('world');
+					done();
+				},'hi','world')
+				.then(({value})=>{
+					expect(value).to.equal('foo');
+				},(err)=>{
+					done(err);
+				}).catch(done);
+			});
+			
+		});
+		
 	});
 	
 	after("destroy client",()=>{

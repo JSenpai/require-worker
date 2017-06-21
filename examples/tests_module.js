@@ -77,3 +77,13 @@ if (promisify && promisify.custom) {
 } else {
 	exports.somePromisifiableFunction = false;
 }
+
+exports.instantCallback = (cb,...args)=>{
+	cb(...args);
+	return 42;
+};
+
+exports.timedCallback = (cb,...args)=>{
+	setTimeout(()=>cb(...args),10);
+	return 'foo';
+};
