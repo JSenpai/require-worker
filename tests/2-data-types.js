@@ -492,8 +492,6 @@ describe("Require-Worker Data Types",()=>{
 				},'hello')
 				.then(({value})=>{
 					expect(value).to.equal(42);
-				},(err)=>{
-					done(err);
 				}).catch(done);
 			});
 			
@@ -508,11 +506,24 @@ describe("Require-Worker Data Types",()=>{
 				},'hi','world')
 				.then(({value})=>{
 					expect(value).to.equal('foo');
-				},(err)=>{
-					done(err);
 				}).catch(done);
 			});
-			
+
+			it("Multiple Callbacks",function(done){
+				this.timeout(500);
+				proxy.multipleCallbacks(
+					(i)=>{ expect(i).to.equal(0); },
+					(i)=>{ expect(i).to.equal(1); },
+					(i)=>{
+						expect(i).to.equal(2);
+						done();
+					}
+				)
+				.then(({value})=>{
+					expect(value).to.equal('bar');
+				}).catch(done);
+			});
+
 		});
 		
 	});

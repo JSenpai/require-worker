@@ -87,3 +87,10 @@ exports.timedCallback = (cb,...args)=>{
 	setTimeout(()=>cb(...args),10);
 	return 'foo';
 };
+
+exports.multipleCallbacks = (...cb)=>{
+	for(var i=0,l=cb.length; i<l; i++){
+		cb[i](i);
+	}
+	return 'bar';
+};
