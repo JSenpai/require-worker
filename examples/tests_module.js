@@ -94,3 +94,8 @@ exports.multipleCallbacks = (...cb)=>{
 	}
 	return 'bar';
 };
+
+exports.multiCallsCallback = (cb,times)=>{
+	for(var i=0; i<times; i++) cb(i);
+	return true;
+};

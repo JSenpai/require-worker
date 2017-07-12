@@ -527,6 +527,57 @@ describe("Require-Worker Data Types",()=>{
 				}).catch(done);
 			});
 			
+			it("Multiple Callback Calls via .configure({ callbackLimit:x })",function(done){
+				this.timeout(500);
+				var done2 = _.after(10,done);
+				var checkCount = 0;
+				proxy.multiCallsCallback((i)=>{
+					checkCount++;
+					done2();
+				},8) // Anymore than 8 will simply be ignored on the client
+				.configure({ callbackLimit:8, callbackOnRemove:()=>{
+					if(checkCount<8) done("Callback Limit Not Reached? checkCount="+checkCount);
+					else done2();
+				} })
+				.then(({value})=>{
+					expect(value).to.equal(true);
+					done2();
+				}).catch(done);
+			});
+			
+			it("Multiple Callback Calls hit Limit",function(done){
+				this.timeout(500);
+				var done2 = _.after(3,done);
+				var checkCount = 0;
+				proxy.multiCallsCallback((i)=>{
+					checkCount++;
+					if(checkCount>1) done("Callback Calls Over Limit? checkCount="+checkCount);
+					else done2();
+				},2)
+				.configure({ callbackLimit:1, callbackOnRemove:()=>{
+					done2();
+				} })
+				.then(({value})=>{
+					expect(value).to.equal(true);
+					done2();
+				}).catch(done);
+			});
+			
+			it("Multiple Callback Calls no Limit",function(done){
+				this.timeout(500);
+				var done2 = _.after(2,done);
+				var checkCount = 0;
+				proxy.multiCallsCallback((i)=>{
+					checkCount++;
+					if(checkCount>=10) done2();
+				},10)
+				.configure({ callbackLimit:0 })
+				.then(({value})=>{
+					expect(value).to.equal(true);
+					done2();
+				}).catch(done);
+			});
+			
 		});
 		
 	});
