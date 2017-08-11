@@ -43,8 +43,28 @@ describe("Main: require-worker",()=>{
 			done();
 		});
 		
+		it("should succeed to require existing module via returnClientPromise:true",function(done){
+			this.slow(1000);
+			try{
+				var clientPromise = requireWorker.require(testModuleFile,{ returnClientPromise:true }); // New Client
+				expect(clientPromise).to.be.a('promise');
+				clientPromise.then((client)=>{
+					expect(client).to.be.instanceof(requireWorker.coreClient.requireWorkerClient);
+					if(!client.events && client._destroyed) return done("requireWorker client has been destroyed");
+					expect(client).to.have.property('events');
+					client.destroy();
+					done();
+				})
+				.catch((err)=>{
+					done("requireWorker client promise failed: "+err);
+				});
+			}catch(err){
+				done("requireWorker client constructor threw an error when it should not have: "+err);
+			}
+		});
+		
 		var firstClient = null, preparedProcessesCount = 0;
-		it("should succeed to require existing module",function(done){
+		it("should succeed to require existing module via returnClient:true",function(done){
 			this.slow(1000);
 			preparedProcessesCount = requireWorker.getPreparedProcessesCount();
 			try{
@@ -68,7 +88,7 @@ describe("Main: require-worker",()=>{
 			done();
 		});
 
-		it("should fail to require non-existant module",function(done){
+		it("should fail to require non-existant module via returnClient:true",function(done){
 			this.slow(1000);
 			try{
 				var client = requireWorker.require('./something.that.does.not.exist.js',{ returnClient:true }); // New Client
@@ -82,6 +102,27 @@ describe("Main: require-worker",()=>{
 				});
 				client.events.once('requireSuccess',()=>{
 					done("requireWorker client emitted 'requireSuccess' when it should not have");
+				});
+			}catch(err){
+				done("requireWorker client constructor threw an error when it should not have: "+err);
+			}
+		});
+		
+		it("should fail to require non-existant module via returnClientPromise:true",function(done){
+			this.slow(1000);
+			try{
+				var clientPromise = requireWorker.require('./something.that.does.not.exist.js',{ returnClientPromise:true }); // New Client
+				expect(clientPromise).to.be.a('promise');
+				expect(clientPromise.client).to.be.instanceof(requireWorker.coreClient.requireWorkerClient);
+				//if(!clientPromise.client.events && clientPromise.client._destroyed) return done();
+				expect(clientPromise.client).to.have.property('events');
+				clientPromise.then((client)=>{
+					done("requireWorker client promise resolved when it should not have");
+				})
+				.catch((err)=>{
+					expect(err).to.have.property('code');
+					expect(err.code).to.equal('REQUIRE_FILE_NOT_FOUND');
+					done();
 				});
 			}catch(err){
 				done("requireWorker client constructor threw an error when it should not have: "+err);
@@ -108,6 +149,16 @@ describe("Main: require-worker",()=>{
 			var client = requireWorker.require(testModuleFile,{ returnClient:true }); // Returns Cached Client
 			expect(client).to.equal(firstClient);
 			done();
+		});
+		
+		it("should return cached client via promise",(done)=>{
+			var clientPromise = requireWorker.require(testModuleFile,{ returnClientPromise:true }); // Returns Cached Client via Promise
+			expect(clientPromise).to.be.a('promise');
+			clientPromise.then((client)=>{
+				expect(client).to.equal(firstClient);
+				done();
+			})
+			.catch(()=>done('Client Promise Failed'));
 		});
 		
 		it("should return client via requireWorker( proxy )",(done)=>{
