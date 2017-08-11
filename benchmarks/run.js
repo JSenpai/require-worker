@@ -1,13 +1,9 @@
 
+const util = require('util');
+const _ = require('../lib/underscore-with-mixins');
+const requireWorker = require('../');
 
-var _ = require('../lib/underscore-with-mixins');
-var requireWorker = require('../');
-
-var testModuleFile = '../examples/tests_module';
-var rwClient = requireWorker.require(testModuleFile,{ returnClient:true });;
-//rwClient.setChildReferenced(false);
-
-var benchmark = async (count,timeout,fn)=>{
+const benchmark = async (count,timeout,fn)=>{
 	var i=0, timeStart = Date.now();
 	if(count===null || count===0){
 		while(true){
@@ -31,23 +27,37 @@ var benchmark = async (count,timeout,fn)=>{
 	};
 };
 
+const formatBenchmarkCycleResult = (result)=>{
+	var str = '  ';
+	if(_.isObject(result)) result = util.inspect(result,{ colors:true }).replace(/^\{|\}$/g,'').trim();
+	str += result;
+	return str;
+};
+
 (async ()=>{
 	
+	console.log('# Creating main require-worker client');
+	const testModuleFile = '../examples/tests_module';
+	const rwClientPromise = requireWorker.require(testModuleFile,{ returnClientPromise:true });
+	const rwClient = rwClientPromise.client;
+	//rwClient.setChildReferenced(false);
+	await rwClientPromise;
+	
 	// Benchmark fetching clients from cache upon duplicate client creation
-	console.log('Cached Clients');
+	console.log('> Cached Clients');
 	var benchCachedClients = (count,timeout)=>{
 		return benchmark(count,timeout,()=>{
 			return new Promise((resolve,reject)=>{
-				var c = requireWorker.require(testModuleFile,{ returnClient:true, shareProcess:rwClient });
-				c.events.once('error',(err)=>reject(err));
-				c.events.once('requireSuccess',()=>{
-					c.destroy();
+				requireWorker.require(testModuleFile,{ returnClientPromise:true, shareProcess:rwClient })
+				.then((client)=>{
+					client.destroy();
 					resolve();
-				});
+				})
+				.catch((err)=>reject(err));
 			});
 		})
-		.then((result)=>{ console.log(result); return result; })
-		.catch((err)=>{ console.error('ERROR',err); });
+		.then((result)=>{ console.log(formatBenchmarkCycleResult(result)); return result; })
+		.catch((err)=>{ console.error('-','ERROR',err); });
 	};
 	await benchCachedClients(0,1000);
 	await benchCachedClients(0,1000);
@@ -57,7 +67,7 @@ var benchmark = async (count,timeout,fn)=>{
 	await benchCachedClients(0,1000);
 	
 	// Benchmark simple get string operation
-	console.log('Get String');
+	console.log('> Get String');
 	var benchGetString = (count,timeout)=>{
 		return benchmark(count,timeout,()=>{
 			return new Promise((resolve,reject)=>{
@@ -66,8 +76,8 @@ var benchmark = async (count,timeout,fn)=>{
 				.catch(reject);
 			});
 		})
-		.then((result)=>{ console.log(result); return result; })
-		.catch((err)=>{ console.error('ERROR',err); });
+		.then((result)=>{ console.log(formatBenchmarkCycleResult(result)); return result; })
+		.catch((err)=>{ console.error('-','ERROR',err); });
 	};
 	await benchGetString(0,1000);
 	await benchGetString(0,1000);
@@ -77,7 +87,7 @@ var benchmark = async (count,timeout,fn)=>{
 	await benchGetString(0,1000);
 	
 	// Benchmark simple set string operation
-	console.log('Set String');
+	console.log('> Set String');
 	var benchSetString = (count,timeout)=>{
 		return benchmark(count,timeout,()=>{
 			return new Promise((resolve,reject)=>{
@@ -86,8 +96,8 @@ var benchmark = async (count,timeout,fn)=>{
 				.catch(reject);
 			});
 		})
-		.then((result)=>{ console.log(result); return result; })
-		.catch((err)=>{ console.error('ERROR',err); });
+		.then((result)=>{ console.log(formatBenchmarkCycleResult(result)); return result; })
+		.catch((err)=>{ console.error('-','ERROR',err); });
 	};
 	await benchSetString(0,1000);
 	await benchSetString(0,1000);
