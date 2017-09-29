@@ -99,3 +99,8 @@ exports.multiCallsCallback = (cb,times)=>{
 	for(var i=0; i<times; i++) cb(i);
 	return true;
 };
+
+exports.causeUncaughtException = ()=>{
+	var theUncaughtException = void 0;
+	setTimeout(()=>theUncaughtException());
+};

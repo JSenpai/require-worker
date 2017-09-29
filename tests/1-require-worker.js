@@ -28,7 +28,7 @@ describe("Main: require-worker",()=>{
 		});
 	}
 	
-	describe("check require-worker client",()=>{
+	describe("require-worker client",()=>{
 
 		it("should have properties on requireWorker",(done)=>{
 			expect(requireWorker).to.have.property('require');
@@ -56,7 +56,7 @@ describe("Main: require-worker",()=>{
 					done();
 				})
 				.catch((err)=>{
-					done("requireWorker client promise failed: "+err);
+					done("requireWorker client promise failed: "+(err.message||err));
 				});
 			}catch(err){
 				done("requireWorker client constructor threw an error when it should not have: "+err);
@@ -158,7 +158,7 @@ describe("Main: require-worker",()=>{
 				expect(client).to.equal(firstClient);
 				done();
 			})
-			.catch(()=>done('Client Promise Failed'));
+			.catch(()=>done('Client Promise Failed: '+(err.message||err)));
 		});
 		
 		it("should return client via requireWorker( proxy )",(done)=>{
@@ -229,7 +229,7 @@ describe("Main: require-worker",()=>{
 		
 	});
 	
-	describe("check require-worker client destruction",()=>{
+	describe("require-worker client destruction",()=>{
 		
 		describe("calls should error with code 'DESTROYED' on client destroy",()=>{
 			var client, proxy;
@@ -284,6 +284,30 @@ describe("Main: require-worker",()=>{
 				}).catch(done);
 			});
 			
+		});
+		
+	});
+	
+	describe("require-worker host",()=>{
+		
+		it("should catch uncaught exceptions then exit",function(done){
+			this.slow(1000);
+			this.timeout(1000);
+			var clientPromise = requireWorker.require(testModuleFile,{ ownProcess:true, returnClientPromise:true }); // Returns Cached Client via Promise
+			expect(clientPromise).to.be.a('promise');
+			clientPromise.then((client)=>{
+				expect(client).to.have.property('proxy');
+				client.events.once('error',(err)=>{
+					expect(err).to.have.property('message');
+					expect(err).to.have.property('stack');
+					expect(err).to.have.property('code');
+					client.events.once('destroy',()=>{
+						done();
+					});
+				});
+				client.proxy.causeUncaughtException().catch(()=>{});
+			})
+			.catch((err)=>done('Client Promise Failed: '+(err.message||err)));
 		});
 		
 	});
