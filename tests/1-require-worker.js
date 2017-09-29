@@ -97,7 +97,7 @@ describe("Main: require-worker",()=>{
 				expect(client).to.have.property('events');
 				client.events.once('error',(err)=>{
 					expect(err).to.have.property('code');
-					expect(err.code).to.equal('REQUIRE_FILE_NOT_FOUND');
+					expect(err.code).to.equal('MODULE_NOT_FOUND');
 					done();
 				});
 				client.events.once('requireSuccess',()=>{
@@ -121,7 +121,7 @@ describe("Main: require-worker",()=>{
 				})
 				.catch((err)=>{
 					expect(err).to.have.property('code');
-					expect(err.code).to.equal('REQUIRE_FILE_NOT_FOUND');
+					expect(err.code).to.equal('MODULE_NOT_FOUND');
 					done();
 				});
 			}catch(err){
