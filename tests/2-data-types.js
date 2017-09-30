@@ -80,6 +80,37 @@ describe("Require-Worker Data Types",()=>{
 				
 			});
 			
+			describe("support for proxy() calls",()=>{
+				
+				it("get string via proxy().configure({ property:'stringData' })",(done)=>{
+					proxy().configure({ property:'stringData' }).then(({value})=>{
+						expect(value).to.equal('abc');
+						done();
+					},(err)=>{
+						done('get error: '+err);
+					}).catch(done);
+				});
+				
+				it("return value via proxy('world').configure({ property:'hello' })",(done)=>{
+					proxy('world').configure({ property:'hello' }).then(({value})=>{
+						expect(value).to.equal('Hello world!');
+						done();
+					},(err)=>{
+						done('get error: '+err);
+					}).catch(done);
+				});
+				
+				it("return value via proxy().configure({ property:'hello', args:['world'] })",(done)=>{
+					proxy().configure({ property:'hello', args:['world'] }).then(({value})=>{
+						expect(value).to.equal('Hello world!');
+						done();
+					},(err)=>{
+						done('get error: '+err);
+					}).catch(done);
+				});
+				
+			});
+			
 			describe("support configure options",()=>{
 				
 				it("check if property exists via .configure({ hasProperty:true })",(done)=>{
