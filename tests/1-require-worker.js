@@ -234,18 +234,18 @@ describe("Main: require-worker",()=>{
 		describe("calls should error with code 'DESTROYED' on client destroy",()=>{
 			var client, proxy;
 			
-			it("have promise action work after create, before destroy",function(done){
+			it("have proxy call work after create, before destroy",function(done){
 				this.slow(1000);
 				client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
 				proxy = client.proxy;
 				proxy.stringData().then(()=>{
 					done();
 				},(err)=>{
-					done("promise action failed when it should not have");
+					done("proxy call failed when it should not have");
 				}).catch(done);
 			});
 			
-			it("have promise action called after destroy, and reject with destroy error",(done)=>{
+			it("have proxy call called after destroy, and reject with destroy error",(done)=>{
 				try{
 					client.destroy();
 				}catch(err){
@@ -259,7 +259,7 @@ describe("Main: require-worker",()=>{
 				};
 				if(promise){
 					promise.then(()=>{
-						done("promise action succeeded when it should not have");
+						done("proxy call succeeded when it should not have");
 					},(err)=>{
 						expect(err).to.have.property('code');
 						expect(err.code).to.equal('DESTROYED');
@@ -272,11 +272,11 @@ describe("Main: require-worker",()=>{
 		
 		describe("should reject promises with error code 'DESTROYED' on host destroy",()=>{
 			
-			it("have promise action error after destroy",function(done){
+			it("have proxy call error after destroy",function(done){
 				this.slow(1000);
 				var client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
 				client.proxy.destroyHost().then(()=>{
-					done("promise action succeeded when it should not have");
+					done("proxy call succeeded when it should not have");
 				},(err)=>{
 					expect(err).to.have.property('code');
 					expect(err.code).to.equal('DESTROYED');
@@ -399,7 +399,7 @@ describe("Main: require-worker",()=>{
 			
 			it("should fail with 'INVALID_TARGET' (host export is an object)",(done)=>{
 				proxy().then(({value})=>{
-					done("promise action succeeded when it should not have");
+					done("proxy call succeeded when it should not have");
 				},(err)=>{
 					expect(err).to.have.property('code');
 					expect(err.code).to.equal('INVALID_TARGET');
@@ -409,7 +409,7 @@ describe("Main: require-worker",()=>{
 			
 			it("new proxy() should fail with 'INVALID_TARGET' (host export is an object)",(done)=>{
 				new proxy().then(({value})=>{
-					done("promise action succeeded when it should not have");
+					done("proxy call succeeded when it should not have");
 				},(err)=>{
 					expect(err).to.have.property('code');
 					expect(err.code).to.equal('INVALID_TARGET');
@@ -788,7 +788,7 @@ describe("Main: require-worker",()=>{
 					expect(value).to.equal(localOS.platform());
 					done();
 				},(err)=>{
-					done("promise action failed when it should not have: "+err);
+					done("proxy call failed when it should not have: "+err);
 				}).catch(done);
 			});
 			
@@ -797,7 +797,7 @@ describe("Main: require-worker",()=>{
 					expect(value).to.deep.equal(localOS.userInfo());
 					done();
 				},(err)=>{
-					done("promise action failed when it should not have: "+err);
+					done("proxy call failed when it should not have: "+err);
 				}).catch(done);
 			});
 			
@@ -816,7 +816,7 @@ describe("Main: require-worker",()=>{
 					expect(value).to.equal(localUtil.format('%s:%s','foo','bar','baz'));
 					done();
 				},(err)=>{
-					done("promise action failed when it should not have: "+err);
+					done("proxy call failed when it should not have: "+err);
 				}).catch(done);
 			});
 			
