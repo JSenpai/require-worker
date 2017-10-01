@@ -181,7 +181,7 @@ describe("Require-Worker Data Types",()=>{
 					}).catch(done);
 				});
 				
-				it("set exiting property (as string) via .configure({ newOperator:true })",(done)=>{
+				it("set property value via .configure({ newOperator:true })",(done)=>{
 					proxy.stringData('qwerty').configure({ newOperator:true }).then(({value})=>{
 						expect(value).to.be.true;
 						return proxy.stringData();
@@ -209,7 +209,7 @@ describe("Require-Worker Data Types",()=>{
 					}).catch(done);
 				});
 				
-				it("set exiting property (as string) via .configure({ setProperty:true })",(done)=>{
+				it("set property value via .configure({ setProperty:true })",(done)=>{
 					proxy.stringData('xyz').configure({ setProperty:true }).then(({value})=>{
 						expect(value).to.be.true;
 						return proxy.stringData();
