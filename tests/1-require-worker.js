@@ -311,13 +311,13 @@ describe("Main: require-worker",()=>{
 		it("client.restart()",function(done){
 			this.slow(1000);
 			expect(client.events,'client.events still exists').to.be.undefined;
-			var r = client.restart();
-			r.then((c)=>{
-				client = c;
-				expect(client).to.have.property('events');
-				proxy = client.proxy;
-				done();
-			}).catch((err)=>{
+			client = client.restart();
+			expect(client).to.have.property('events');
+			expect(client).to.have.property('readyPromise');
+			expect(client).to.have.property('proxy');
+			proxy = client.proxy;
+			client.readyPromise.then(()=>done())
+			.catch((err)=>{
 				console.error("Test Error:",err);
 				done("client.restart() returned a promise which rejected with:",err);
 			});
