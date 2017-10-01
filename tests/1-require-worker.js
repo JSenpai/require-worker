@@ -702,6 +702,24 @@ describe("Main: require-worker",()=>{
 		
 		describe("preConfigure options",()=>{
 			
+			
+			describe("preConfiguredProxy via client preConfigureProxy option",()=>{
+				
+				it("create client with preConfigureProxy option, then call hello('world')",function(done){
+					this.slow(1000);
+					const { client, proxy } = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true, preConfigureProxy:{ returnKey:'value' } }); // New Client
+					proxy.hello('world').then((value)=>{
+						expect(value).to.equal('Hello world!');
+						done();
+					},(err)=>{
+						done("errored when it should not have: "+err);
+					})
+					.catch(done)
+					.then(()=>client.destroy());
+				});
+				
+			});
+			
 			describe("preConfiguredProxy via client.preConfiguredProxy(options)",()=>{
 				var preConfiguredProxy;
 				
