@@ -109,6 +109,20 @@ describe("Require-Worker Data Types",()=>{
 					}).catch(done);
 				});
 				
+				it("set property value via new proxy().configure({ property:'hello', args:['test'] })",(done)=>{
+					new proxy().configure({ property:'stringData', args:['test'] }).then(({value})=>{
+						expect(value).to.be.true;
+						return proxy.stringData();
+					},(err)=>{
+						done('set error: '+err);
+					}).then(({value})=>{
+						expect(value).to.equal('test');
+						done();
+					},(err)=>{
+						done('get error: '+err);
+					}).catch(done);
+				});
+				
 			});
 			
 			describe("support configure options",()=>{
