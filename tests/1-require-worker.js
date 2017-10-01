@@ -286,6 +286,45 @@ describe("Main: require-worker",()=>{
 			
 		});
 		
+		describe("other clients should still work on a shared process where a client has been destroyed",()=>{
+			var client1, client2, client3, client4;
+			
+			it("create 4 clients on same process",function(done){
+				this.slow(1000);
+				client1 = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true });
+				client2 = requireWorker.require(testModuleFile,{ returnClient:true, shareProcess:client1 });
+				client3 = requireWorker.require(testModuleFile,{ returnClient:true, shareProcess:client1 });
+				client4 = requireWorker.require(testModuleFile,{ returnClient:true, shareProcess:client1 });
+				Promise.all([ client1.readyPromise, client2.readyPromise, client3.readyPromise, client4.readyPromise ])
+				.then(()=>done())
+				.catch(done);
+			});
+			
+			it("destroy client3",function(done){
+				client3.events.once('destroyed',()=>done());
+				client3.destroy();
+			});
+			
+			it("have proxy call work on client 1",function(done){
+				client1.proxy.stringData()
+				.then(()=>done())
+				.catch(done);
+			});
+			
+			it("have proxy call work on client 2",function(done){
+				client2.proxy.stringData()
+				.then(()=>done())
+				.catch(done);
+			});
+			
+			it("have proxy call work on client 4",function(done){
+				client4.proxy.stringData()
+				.then(()=>done())
+				.catch(done);
+			});
+			
+		});
+		
 	});
 	
 	describe("require-worker client.restart()",()=>{
