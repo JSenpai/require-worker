@@ -1,5 +1,4 @@
 # require-worker - Nodejs Module
-> require with a fork and a promise
 
 [![NPM Version][npm-image]][npm-url]
 [![Downloads Stats][npm-downloads]][npm-url]
@@ -13,7 +12,7 @@ This module is meant to require other Nodejs modules, but in a new process inste
 
 This is very new, experimental and features are still getting implemented.
 
-There are many cases where this will not work with existing modules which accept data types, or return data types that are not yet implemented. Though this is being worked on. See the API below.
+There are many cases where this will not work with existing modules which accept data types, or return data types that are not yet implemented. Though this is being worked on. [See the API][api-url].
 
 ## Why use this?
 
@@ -87,6 +86,7 @@ Github Repository: [https://github.com/Unchosen/require-worker][github-url]
 
 NPM Package: [https://npmjs.org/package/require-worker][npm-url]
 
+[api-url]: API.md
 [github-url]: https://github.com/Unchosen/require-worker
 [github-branch]: https://github.com/Unchosen/require-worker/tree/dev-pre-v1
 [github-releases]: https://github.com/Unchosen/require-worker/releases
