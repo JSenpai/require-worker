@@ -288,6 +288,52 @@ describe("Main: require-worker",()=>{
 		
 	});
 	
+	describe("require-worker client.restart()",()=>{
+		var client, proxy;
+		
+		it("have proxy call work after create, before destroy",function(done){
+			this.slow(1000);
+			client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true }); // New Client
+			proxy = client.proxy;
+			proxy.stringData().then(()=>{
+				done();
+			},(err)=>{
+				console.error("Test Error:",err);
+				done("proxy call failed when it should not have");
+			}).catch(done);
+		});
+		
+		it("client.destroy()",function(done){
+			client.events.once('destroyed',()=>done());
+			client.destroy();
+		});
+		
+		it("client.restart()",function(done){
+			this.slow(1000);
+			expect(client.events,'client.events still exists').to.be.undefined;
+			var r = client.restart();
+			r.then((c)=>{
+				client = c;
+				expect(client).to.have.property('events');
+				proxy = client.proxy;
+				done();
+			}).catch((err)=>{
+				console.error("Test Error:",err);
+				done("client.restart() returned a promise which rejected with:",err);
+			});
+		});
+		
+		it("have proxy call work",function(done){
+			proxy.stringData().then(()=>{
+				done();
+			},(err)=>{
+				console.error("Test Error:",err);
+				done("proxy call failed when it should not have");
+			}).catch(done);
+		});
+		
+	});
+	
 	describe("require-worker host",()=>{
 		
 		it("should catch uncaught exceptions then exit",function(done){
