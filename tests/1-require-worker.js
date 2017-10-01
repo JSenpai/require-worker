@@ -301,7 +301,7 @@ describe("Main: require-worker",()=>{
 					expect(err).to.have.property('message');
 					expect(err).to.have.property('stack');
 					expect(err).to.have.property('code');
-					client.events.once('destroy',()=>{
+					client.events.once('destroyed',()=>{
 						done();
 					});
 				});
