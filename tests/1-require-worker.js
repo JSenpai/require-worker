@@ -301,8 +301,9 @@ describe("Main: require-worker",()=>{
 			});
 			
 			it("destroy client3",function(done){
-				client3.events.once('destroyed',()=>done());
-				client3.destroy();
+				client3.destroy()
+				.then(()=>done())
+				.catch(done);
 			});
 			
 			it("have proxy call work on client 1",function(done){

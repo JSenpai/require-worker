@@ -99,6 +99,8 @@ Usage: `client.destroy()`
 
 Completly destroy the require-worker client. The client can not be used again without calling the `client.restart()` method.
 
+The return value is a promise which resolves once the client has been destroyed.
+
 The host will also be destroyed.
 
 ## client.restart()
@@ -163,6 +165,8 @@ The require-worker host interface in a forked child process for the module that 
 Usage: `host.destroy()`
 
 Completly destroy the require-worker host. The forked child process that the host resides within, may be forcefully exited if there are no other hosts that are shared within the same process. If other hosts are shared, then the process can remain open, and the required module can still operate, but can no longer communicate to the require-worker client in the other process.
+
+The return value is a promise which resolves once the host has been destroyed.
 
 The client will also be destroyed.
 
