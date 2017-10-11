@@ -1,7 +1,7 @@
 
 # require-worker API docs
 
-Read README.md before jumping into this documentation.
+Read [README.md](README.md) before jumping into this documentation.
 
 The require-worker module creates a seperate nodejs process via `fork`, which that process then uses the native `require` method on the given path.
 
@@ -102,6 +102,8 @@ Completly destroy the require-worker client. The client can not be used again wi
 The return value is a promise which resolves once the client has been destroyed.
 
 The host will also be destroyed.
+
+All in-progress proxy calls will be rejected with an error that has the `code` property set to `'DESTROYED'`.
 
 ## client.restart()
 
@@ -233,6 +235,10 @@ The `options` paramater specifies how the proxy call will behave. See below for 
 | `eventEmitter` | *TODO: Work In Progress. Not Yet Implemented.* | - |
 | `property` | If the proxy call was initiated via proxy(), then this option can be used to specify what the proxy call `name` / property is. | - |
 | `args` | Specifies the arguments when the `property` option is used. | - |
+| `callbackLimit` | The maximum amount of times an argument callback can be executed before it is unregistered. | `1` |
+| `callbackTimeout` | The maximum amount of time since the proxy call that a callback argument remains registered. | `0` (no limit) |
+| `callbackStopPromise` | A promise that when resolved, all callback arguments will be unregistered. | - |
+| `callbackOnRemove` | A callback that is fired when a callback argument is unregistered. The argument index is passed as the first paramater. | - |
 
 ### Proxy call configure example:
 
@@ -278,7 +284,58 @@ clientProxy.greetings('friend').then(({ value })=>{ ... })
 
 ## Working with data types
 
-*TODO - Coming Soon.*
+When a proxy call is made, the arguments have to be serialised and sent to the host. The return values also have to be serialised then sent back to the client. Data is sent over the communication channel as JSON strings which means that we need to support references and other data types.
+
+### Basic Data Types
+
+Basic data types are those which can be converted to JSON and back without any issues. Such as `Boolean`, `Number`, `String`, `Object` (no references), `Array` (no references) and `Null`.
+
+### Simple Data Types
+
+The following data types have implemented support: `NaN` (via underscore's _.isNaN method), `Date`, `Promise` and Regular Expressions.
+
+### Function Callbacks
+
+Function callbacks are available as proxy call paramaters, but there are limitations.
+
+They are not yet available as return values.
+
+Simply specify a callback and it can be executed once unless configured by the `callbackLimit` option.
+
+If you are unsure if the callback will ever be executed, specify a timeout via the `callbackTimeout` option.
+
+Client:
+
+```js
+clientProxy.whenReady(()=>{
+	console.log('ready');
+})
+.then(({ value })=>{ ... });
+```
+
+Host:
+
+```js
+exports.whenReady = (cb)=>{
+	setTimeout(cb,2000);
+};
+```
+
+There are options available to specify callback limits and timeouts because the callbacks will remain in memory until they are removed. They can not be automatically garbage collected because they are designed to stay around after the proxy call 'promise' has been completed.
+
+*NB: Maybe we can experiment with WeakMaps on both client and host?*
+
+*This area requires feedback and improvement.*
+
+### Other Data Types
+
+Any Object or Array that contain values that can not be stringified with JSON, will be ignored. If the Object or Array is safe (Work In Progress), it will work.
+
+*This area is still a work in progress.*
+
+The plan is to have any unsafe data type be sent over as a new proxy, which will act like the client.proxy but have the target as the original value, so proxy calls will be available on that proxy object.
+
+If you are using third-party modules, the best way to handle these data type issues, is to have your own module (which is required via require-worker) which interacts with the third-party module.
 
 # Async-Await
 
