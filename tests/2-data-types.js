@@ -492,6 +492,23 @@ describe("Require-Worker Data Types",()=>{
 			
 		});
 		
+		describe("Array",()=>{
+			
+			describe("simple/safe Array",()=>{
+				
+				it("get array",(done)=>{
+					proxy.someArray().then(({value})=>{
+						expect(value).to.deep.equal([ 1, 2, 3, 55, 'hello', 66, 1337 ]);
+						done();
+					},(err)=>{
+						done('get error: '+err);
+					}).catch(done);
+				});
+				
+			});
+			
+		});
+		
 		describe("Misc Configure Options",()=>{
 			
 			describe("Promisify via .configure({ promisify:true })",(done)=>{

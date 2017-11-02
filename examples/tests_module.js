@@ -62,6 +62,8 @@ exports.someObject = {
 	height: '6.8m'
 };
 
+exports.someArray = [ 1, 2, 3, 55, 'hello', 66, 1337 ];
+
 const promisify = require('util').promisify;
 if (promisify && promisify.custom) {
 	
