@@ -323,9 +323,7 @@ exports.whenReady = (cb)=>{
 
 There are options available to specify callback limits and timeouts because the callbacks will remain in memory until they are removed. They can not be automatically garbage collected because they are designed to stay around after the proxy call 'promise' has been completed.
 
-*NB: Maybe we can experiment with WeakMaps on both client and host?*
-
-*This area requires feedback and improvement.*
+*This area is still a work in progress.*
 
 ### Other Data Types
 

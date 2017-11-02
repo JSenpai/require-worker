@@ -52,7 +52,7 @@ Tests are written with ES6 features just like this module.
 
 ## Contributors
 
-Create issues on the GitHub project or create pull requests.
+Create issues or pull requests on the GitHub project.
 
 All the help is appreciated.
 
