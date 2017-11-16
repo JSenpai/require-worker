@@ -1,6 +1,7 @@
 /* global process, require, __filename, __dirname, Promise */
 "use strict";
 
+const cluster = require('cluster');
 const path = require('path');
 
 const _ = require(path.resolve(__dirname,'./lib/underscore-with-mixins'));
@@ -19,7 +20,7 @@ module.exports = exports = (target)=>{
 	return coreClient.clientsMap.get(target);
 };
 
-var requireWorkerObj = { exports, __filename, coreClient, coreHost, coreProcessManager };
+var requireWorkerObj = { exports, __filename, coreClient, coreHost, coreProcessManager, cluster };
 
 coreClient.setRequireWorker(requireWorkerObj);
 exports.coreClient = coreClient;
@@ -53,6 +54,7 @@ requireWorkerObj.getStackFiles = function getStackFiles(){
 };
 
 // Check if the current process is a require-worker host
-if(require.main===module && process.argv.length===4 && process.argv[2]==='--rwProcess'){
+if(require.main===module && process.argv.length>=4 && process.argv[2]==='--rwProcess'){
+	if(cluster.isWorker && process.argv.length>=5) process.chdir(process.argv[4]);
 	coreHost.initHostProcess({ ipcTransportID:process.argv[3] });
 }
