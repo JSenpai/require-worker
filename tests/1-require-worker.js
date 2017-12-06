@@ -401,6 +401,35 @@ describe("Main: require-worker",()=>{
 		
 	});
 	
+	describe("require-worker recursive children",()=>{
+		var client, proxy;
+		
+		it("create client",function(done){
+			this.slow(1000);
+			client = requireWorker.require(testModuleFile,{ returnClient:true, ownProcess:true });
+			client.readyPromise.then(()=>done()).catch(done);
+			proxy = client.proxy;
+		});
+		
+		it("have children create more children",function(done){
+			this.slow(5000);
+			proxy.createRecursiveRequireWorkerTree(5).configure({ promiseResult:true })
+			.then((value)=>{
+				if(value!==true) return Promise.reject(value);
+				else done();
+			})
+			.catch((r)=>{
+				if(_.isPromise(r)) r.then(r2=>done("resolved promise: "+r2)).catch(r2=>done("rejected promise: "+r2));
+				else done(r);
+			});
+		});
+		
+		it("destroy client",function(done){
+			client.destroy().then(()=>done()).catch(done);
+		});
+		
+	});
+	
 	describe("proxy actions on main interface (target = host export)",()=>{
 		var client, proxy;
 		

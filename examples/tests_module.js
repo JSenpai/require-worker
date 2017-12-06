@@ -106,3 +106,15 @@ exports.causeUncaughtException = ()=>{
 	var theUncaughtException = void 0;
 	setTimeout(()=>theUncaughtException());
 };
+
+exports.createRecursiveRequireWorkerTree = (depth)=>{
+	var requireWorker = require('../');
+	var rwClient = requireWorker.require(__filename,{ returnClient:true });
+	return rwClient.readyPromise.then(({ proxy })=>{
+		if(depth<=0) return true;
+		return proxy.createRecursiveRequireWorkerTree(--depth).configure({ promiseResult:true });
+	})
+	.then((result)=>{
+		return rwClient.destroy().then(()=>result);
+	});
+};
