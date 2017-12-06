@@ -108,8 +108,12 @@ exports.causeUncaughtException = ()=>{
 };
 
 exports.createRecursiveRequireWorkerTree = (depth)=>{
-	var requireWorker = require('../');
-	var rwClient = requireWorker.require(__filename,{ returnClient:true });
+	var requireWorker = require('../'), rwClient;
+	try{
+		rwClient = requireWorker.require(__filename,{ returnClient:true });
+	}catch(err){
+		return Promise.reject(err.message);
+	}
 	return rwClient.readyPromise.then(({ proxy })=>{
 		if(depth<=0) return true;
 		return proxy.createRecursiveRequireWorkerTree(--depth).configure({ promiseResult:true });
