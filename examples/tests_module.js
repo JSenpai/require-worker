@@ -108,17 +108,17 @@ exports.causeUncaughtException = ()=>{
 };
 
 exports.createRecursiveRequireWorkerTree = (depth)=>{
-	var requireWorker = require('../'), rwClient;
 	try{
+		var requireWorker = require('../'), rwClient;
 		rwClient = requireWorker.require(__filename,{ returnClient:true });
+		return rwClient.readyPromise.then(({ proxy })=>{
+			if(depth<=0) return true;
+			return proxy.createRecursiveRequireWorkerTree(--depth).configure({ promiseResult:true });
+		})
+		.then((result)=>{
+			return rwClient.destroy().then(()=>result);
+		});
 	}catch(err){
-		return Promise.reject(err.message);
+		return Promise.reject("createRecursiveRequireWorkerTree Error: "+err.message);
 	}
-	return rwClient.readyPromise.then(({ proxy })=>{
-		if(depth<=0) return true;
-		return proxy.createRecursiveRequireWorkerTree(--depth).configure({ promiseResult:true });
-	})
-	.then((result)=>{
-		return rwClient.destroy().then(()=>result);
-	});
 };
