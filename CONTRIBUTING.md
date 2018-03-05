@@ -2,16 +2,16 @@
 
 Thank you for reading this, and deciding to contribute to this project.
 
-Before contributing to this project, please read the [README](https://github.com/Unchosen/require-worker/blob/master/README.md) file, and browse through the [Wiki](https://github.com/Unchosen/require-worker/wiki) for related information regarding your issue/pull request.
+Before contributing to this project, please read the [README](https://github.com/Jashepp/require-worker/blob/master/README.md) file, and browse through the [Wiki](https://github.com/Jashepp/require-worker/wiki) for related information regarding your issue/pull request.
 
 ### Issues
 
-Before creating an issue, please search existing [open](https://github.com/Unchosen/require-worker/issues?utf8=%E2%9C%93&q=is%3Aissue%20is%3Aopen%20) or [closed](https://github.com/Unchosen/require-worker/issues?q=is%3Aissue+is%3Aclosed) issues.
+Before creating an issue, please search existing [open](https://github.com/Jashepp/require-worker/issues?utf8=%E2%9C%93&q=is%3Aissue%20is%3Aopen%20) or [closed](https://github.com/Jashepp/require-worker/issues?q=is%3Aissue+is%3Aclosed) issues.
 
 Issues may be one of the following:
 - An actual issue that should be fixed
 - A feature request that others would also benefit from
-- A question that is not explained in the project [README](https://github.com/Unchosen/require-worker/blob/master/README.md) file or the project [Wiki](https://github.com/Unchosen/require-worker/wiki).
+- A question that is not explained in the project [README](https://github.com/Jashepp/require-worker/blob/master/README.md) file or the project [Wiki](https://github.com/Jashepp/require-worker/wiki).
 
 ### Pull Requests
 

@@ -60,7 +60,7 @@ All the help is appreciated.
 
 MIT License
 
-Copyright (c) 2017 Jason Sheppard @ https://github.com/Unchosen
+Copyright (c) 2017 Jason Sheppard @ https://github.com/Jashepp
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -82,17 +82,17 @@ SOFTWARE.
 
 ## Links
 
-Github Repository: [https://github.com/Unchosen/require-worker][github-url]
+Github Repository: [https://github.com/Jashepp/require-worker][github-url]
 
 NPM Package: [https://npmjs.org/package/require-worker][npm-url]
 
 [api-url]: API.md
-[github-url]: https://github.com/Unchosen/require-worker
-[github-branch]: https://github.com/Unchosen/require-worker/tree/dev-pre-v1
-[github-releases]: https://github.com/Unchosen/require-worker/releases
-[github-tags]: https://github.com/Unchosen/require-worker/tags
+[github-url]: https://github.com/Jashepp/require-worker
+[github-branch]: https://github.com/Jashepp/require-worker/tree/master
+[github-releases]: https://github.com/Jashepp/require-worker/releases
+[github-tags]: https://github.com/Jashepp/require-worker/tags
 [npm-image]: https://img.shields.io/npm/v/require-worker.svg?style=flat-square
 [npm-url]: https://npmjs.org/package/require-worker
 [npm-downloads]: https://img.shields.io/npm/dm/require-worker.svg?style=flat-square
-[travis-image]: https://travis-ci.org/Unchosen/require-worker.svg?branch=dev-pre-v1
-[travis-url]: https://travis-ci.org/Unchosen/require-worker
+[travis-image]: https://travis-ci.org/Jashepp/require-worker.svg?branch=master
+[travis-url]: https://travis-ci.org/Jashepp/require-worker
