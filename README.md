@@ -26,9 +26,9 @@ I decided to create this module because simply creating a forked process and cha
 
 Nodejs 6.0 or greater is required. This project is written with ES6 features
 
-Warning: This is currently in pre-release. It is not production-ready. Not all planned features are implemented yet.
+Warning: This is currently not production-ready. Not all planned features are implemented yet.
 
-Install the pre-release module via [NPM][npm-url]
+Install the module via [NPM][npm-url]
 ```
 npm install require-worker --save
 ```
