@@ -30,7 +30,7 @@ Warning: This is currently in pre-release. It is not production-ready. Not all p
 
 Install the pre-release module via [NPM][npm-url]
 ```
-npm install require-worker@pre-v1 --save
+npm install require-worker --save
 ```
 Or [download the latest release][github-releases], or git clone the [repository on GitHub][github-branch].
 
