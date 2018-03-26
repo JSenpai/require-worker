@@ -3,7 +3,7 @@
 
 Read [README.md](README.md) before jumping into this documentation.
 
-The require-worker module creates a seperate nodejs process via `fork`, which that process then uses the native `require` method on the given path.
+The require-worker module creates a seperate nodejs process via `cluster.fork` or `childProcess.fork`, which that process then uses the native `require` method on the given path.
 
 Each process can either be dedicated to a single module, or be a shared host to multiple modules. Process & module sharing can be manually specified for what module is shared in the same process as another module.
 
@@ -51,7 +51,7 @@ The optional `options` paramater specifies client specific behavior.
 |-|-|-|
 | `ownProcess` | Dedicate a single process for this module. | `false` |
 | `shareProcess` | Provide a require-worker client (or client proxy) to share this module within it's host process.  | `null` |
-| `forkOptions` | The fork options passed directly to `childProcess.fork`. | automatic |
+| `forkOptions` | The fork options passed directly to `.fork`. | automatic |
 | `parentModule` | The `module` variable for the current script, which the `path` can be relative to the script's directory. | `null` |
 | `returnClient` | Have this require method return the client interface. | `false` |
 | `returnClientPromise` | Have this require method return the `client.readyPromise` promise, which when resolved, the value is the client interface. | `false` |
@@ -73,7 +73,11 @@ A function that lets you find a require-worker client or host interface.
 
 The `object` paramater can be a client object, a host object, a host module's `exports` variable, or a resolved module path.
 
-This method is mainly used within the required module to get the host interface. For example: `const requireWorkerHost = requireWorker(module.exports);`
+This method is mainly used within the required module to get the host interface. For example:
+
+```js
+const requireWorkerHost = requireWorker(module.exports);
+```
 
 # requireWorker client methods
 
@@ -97,7 +101,7 @@ Each forked child process is referenced by default.
 
 Usage: `client.destroy()`
 
-Completly destroy the require-worker client. The client can not be used again without calling the `client.restart()` method.
+Completly destroy the require-worker client. The client can not be used again without calling the `client.restart()` method which basically creates a new client.
 
 The return value is a promise which resolves once the client has been destroyed.
 
@@ -207,7 +211,7 @@ The require-worker client can be accessed via `clientProxy.constructor.client` a
 
 ## Proxy call configurations
 
-Every proxy call returns a promise, with a `.configure(options)` method available. If the proxy call needs to be configured, the method should be called directly after creating the promise, before anything else is done with the promise. If the configure method is called too late, an error will be thrown.
+Every proxy call returns a promise, with a `.configure(options)` method available *(not available on further chained promises)*. If the proxy call needs to be configured, the method should be called directly after creating the promise, before anything else is done with the promise. If the configure method is called too late, an error will be thrown.
 
 The promise resolves with an object containing the results of the proxy call. The `value` property is the result value. The recommended inline way to get this value is via [object destructuring](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment): `clientProxy.proxyCall().then(({ value })=>{ ... })`. This can be overridden via the `returnKey` option.
 
@@ -219,26 +223,26 @@ The `options` paramater specifies how the proxy call will behave. See below for 
 
 | Property | Description (when `true` or specified) | Default Value |
 |-|-|-|
-| `deleteProperty` | The `delete` keyword will be called on the property. | - |
-| `setProperty` | The property will be set to the given value. If multiple arguments are listed, the property's value will be an array of the given values. | - |
-| `hasProperty` | Resolves `true` or `false` if the property exists via the `in` keyword. | - |
-| `hasOwnProperty` | Resolves `true` or `false` if the property exists via the `hasOwnProperty` method. | - |
-| `resolveError` | The proxy call will never reject. The resolved result will contain an `error` property instead of rejection. | - |
+| `deleteProperty` | The `delete` keyword will be called on the property. | false |
+| `setProperty` | The property will be set to the given value. If multiple arguments are listed, the property's value will be an array of the given values. | false |
+| `hasProperty` | Resolves `true` or `false` if the property exists via the `in` keyword. | false |
+| `hasOwnProperty` | Resolves `true` or `false` if the property exists via the `hasOwnProperty` method. | false |
+| `resolveError` | The proxy call will never reject. The resolved result will contain an `error` property instead of rejection. | false |
 | `returnKey` | Resolve/reject with the specified result property instead of the result object. | - |
-| `promiseResult` | Resolve/reject with the target promise value instead of the result object. Same as having `returnKey` as 'promise'. | - |
-| `newOperator` | The `new` keyword will be called on the property. If the property is not a method, this will act as the `setProperty` option. This option can also be triggered if the `new` keyword is used on the proxy call. | - |
+| `promiseResult` | Resolve/reject with the target promise value instead of the result object. Same as having `returnKey` as 'promise'. | false |
+| `newOperator` | The `new` keyword will be called on the property. If the property is not a method, this will act as the `setProperty` option. This option can also be triggered if the `new` keyword is used on the proxy call. | false |
 | `timeout` | The proxy call will reject if the timeout value is reached. | Infinity |
-| `promisify` | If `promisify` exists on the `util` module, and if the method has a `promisify` alternative, then that will be called instead of the method. | - |
-| `followPromise` | If the method returns a promise, then the proxy call will not resolve until that target promise does. Same with rejection. | - |
-| `forceProxy` | *TODO: Work In Progress. Not Yet Implemented.* | Automatic |
-| `objectPath` | *TODO: Work In Progress. Not Yet Implemented.* | - |
-| `eventEmitter` | *TODO: Work In Progress. Not Yet Implemented.* | - |
+| `promisify` | If `promisify` exists on the `util` module, and if the method has a `promisify` alternative, then that will be called instead of the method. | false |
+| `followPromise` | If the method returns a promise, then the proxy call will not resolve until that target promise does. Same with rejection. | false |
 | `property` | If the proxy call was initiated via proxy(), then this option can be used to specify what the proxy call `name` / property is. | - |
 | `args` | Specifies the arguments when the `property` option is used. | - |
 | `callbackLimit` | The maximum amount of times an argument callback can be executed before it is unregistered. | `1` |
 | `callbackTimeout` | The maximum amount of time since the proxy call that a callback argument remains registered. | `0` (no limit) |
 | `callbackStopPromise` | A promise that when resolved, all callback arguments will be unregistered. | - |
 | `callbackOnRemove` | A callback that is fired when a callback argument is unregistered. The argument index is passed as the first paramater. | - |
+| `forceProxy` | *TODO: Work In Progress. Not Yet Implemented.* | Automatic |
+| `objectPath` | *TODO: Work In Progress. Not Yet Implemented.* | - |
+| `eventEmitter` | *TODO: Work In Progress. Not Yet Implemented.* | - |
 
 ### Proxy call configure example:
 
@@ -327,7 +331,7 @@ There are options available to specify callback limits and timeouts because the 
 
 ### Other Data Types
 
-Any Object or Array that contain values that can not be stringified with JSON, will be ignored. If the Object or Array is safe (Work In Progress), it will work.
+Any Object or Array that contain values that can not be stringified with JSON, will be ignored. If the Object or Array is safe *(Work In Progress)*, it will work.
 
 *This area is still a work in progress.*
 
@@ -344,7 +348,18 @@ The below example creates the client, then waits for a proxy call. The proxy cal
 ```js
 (async ()=>{
 	const myModule = require('require-worker').require('myModule');
+	var { value:name } = await myModule.getModuleName();
+	console.log(name);
+})();
+```
+
+Without [object destructuring](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment), you will need to await, then fetch the value.
+
+```js
+(async ()=>{
+	const myModule = require('require-worker').require('myModule');
 	var name = (await myModule.getModuleName()).value;
+	// Or: var name = await myModule.getModuleName().then(({ value })=>value);
 	// ...
 })();
 ```

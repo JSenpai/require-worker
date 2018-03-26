@@ -36,7 +36,24 @@ Or [download the latest release][github-releases], or git clone the [repository 
 
 ## How to use
 
-Todo. See examples.
+[See the API][api-url] for more information.
+
+```js
+// Require require-worker
+const requireWorker = require('require-worker');
+
+// Example Using Async Await
+(async ()=>{
+	// Require native nodejs OS module (return proxy)
+	const os = requireWorker.require('os');
+	// Proxy call userInfo()
+	var { value:userInfo } = await os.userInfo();
+	// Output result
+	console.log(userInfo);
+	// Stop require-worker
+	await os.constructor.client.destroy();
+})();
+```
 
 ## Tests
 
