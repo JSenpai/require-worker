@@ -1,3 +1,9 @@
+# ⛔️ DEPRECATED
+
+This repository is no longer being maintained. It was simply a proof-of-concept / experiment which required too much work to make decently usuable.
+
+Please consider using [Comlink](https://github.com/GoogleChromeLabs/comlink) instead.
+
 # require-worker - Nodejs Module
 
 [![NPM Version][npm-image]][npm-url]
